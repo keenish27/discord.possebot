@@ -1,0 +1,7 @@
+﻿namespace keeganstudios.possebot.Models
+{
+    public class ConfigurationOptions
+    {
+        public string Token { get; set; }        
+    }
+}

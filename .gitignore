@@ -348,3 +348,9 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+#Mac specific file
+.DS_Store
+
+keeganstudios.possebot/settings.json
+keeganstudios.possebot/themes.json
