@@ -2,7 +2,10 @@
   "themes": [
     {
       "audioPath": "<AudioPath>",
-      "userId": "<UserId>"
+      "userId": "<UserId>",
+      "start": 0,
+      "duration": 15,
+      "enable": true
     }
   ]
 }

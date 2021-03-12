@@ -2,6 +2,7 @@
 {
     public class ConfigurationOptions
     {
-        public string Token { get; set; }        
+        public string Token { get; set; }
+        public char BotPrefix { get; set; }
     }
 }

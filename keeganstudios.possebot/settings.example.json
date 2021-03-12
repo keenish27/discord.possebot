@@ -1,5 +1,6 @@
 ﻿{
   "configuration": {
-    "token": "<Token>"
+    "token": "<Token>",
+    "botPrefix": "<BotPrefix>"
   }
 }
