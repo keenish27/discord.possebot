@@ -9,15 +9,26 @@ using System.Threading.Tasks;
 
 namespace keeganstudios.possebot
 {
-    public static class OptionsReader
+    public class OptionsReader : IOptionsReader
     {
-        public static async Task<ConfigurationOptions> ReadConfigurationOptions()
+        public async Task<ConfigurationOptions> ReadConfigurationOptions()
         {
-            var json = JObject.Parse(await File.ReadAllTextAsync("settings.json"));
-            return JsonConvert.DeserializeObject<ConfigurationOptions>(json.GetValue("configuration").ToString());
+            var option = new ConfigurationOptions();
+            try
+            {
+                var json = JObject.Parse(await File.ReadAllTextAsync("settings.json"));
+                option = JsonConvert.DeserializeObject<ConfigurationOptions>(json.GetValue("configuration").ToString());
+            }
+            catch(Exception ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine($"- {ex.StackTrace}");
+            }
+
+            return option;
         }
 
-        public static async Task<ThemeOptions> ReadThemeOptions()
+        public async Task<ThemeOptions> ReadThemeOptions()
         {
             var option = new ThemeOptions();
             try
@@ -28,6 +39,7 @@ namespace keeganstudios.possebot
             catch(Exception ex)
             {
                 Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine($"- {ex.StackTrace}");
             }
 
             return option;
