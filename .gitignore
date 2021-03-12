@@ -354,3 +354,6 @@ MigrationBackup/
 
 keeganstudios.possebot/settings.json
 keeganstudios.possebot/themes.json
+
+#Default media file location
+[Ff]iles/
