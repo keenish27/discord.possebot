@@ -4,7 +4,9 @@ using Discord.WebSocket;
 using keeganstudios.possebot.Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace keeganstudios.possebot.CommandModules
@@ -13,11 +15,13 @@ namespace keeganstudios.possebot.CommandModules
     {        
         private readonly IAudioService _audioService;
         private readonly IOptionsService _optionsService;
+        private readonly HttpClient _httpClient;
 
-        public Theme(IAudioService audioService, IOptionsService optionsService)
+        public Theme(IAudioService audioService, IOptionsService optionsService, HttpClient httpClient)
         {     
             _audioService = audioService;
             _optionsService = optionsService;
+            _httpClient = httpClient;
         }
 
         [Command("ping")]
@@ -38,7 +42,7 @@ namespace keeganstudios.possebot.CommandModules
         [Command("announce me", RunMode = RunMode.Async)]
         [Alias("am")]
         [Summary("Announces the user in their current voice channel using their enabled theme.")]
-        public async Task JoinAndPlay()
+        public async Task ThemeAnnounceAsync()
         {
             try
             {
@@ -75,7 +79,7 @@ namespace keeganstudios.possebot.CommandModules
         [Command("theme enable", RunMode = RunMode.Async)]
         [Alias("te")]
         [Summary("Enables or Disables the user's theme.")]
-        public async Task ThemeEnable([Summary("true or false")] bool enabled)
+        public async Task ThemeEnableAsync([Summary("true or false")] bool enabled)
         {
             try
             {
@@ -93,6 +97,57 @@ namespace keeganstudios.possebot.CommandModules
                 
                 var emoji = new Emoji("👍");
                 await Context.Message.AddReactionAsync(emoji);
+            }
+            catch(Exception ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine($"- {ex.StackTrace}");
+            }
+        }
+
+        [Command("theme attach", RunMode=RunMode.Async)]
+        [Alias("ta")]
+        [Summary("Updates a user theme with the audio file attached to the message")]
+        public async Task ThemeAttachAsync([Summary("Position to start in seconds")]int start, [Summary("Length of time to play in seconds")]int duration)
+        {
+            try
+            {
+                var attachment = Context.Message.Attachments.FirstOrDefault();
+                if(attachment == null)
+                {
+                    await ReplyAsync($"{Context.User.Mention} no file was attached.");
+                    return;
+                }
+
+                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "files", attachment.Filename);
+
+                if (!Directory.Exists(Path.GetDirectoryName(filePath)))
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+                }
+
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                }
+
+                using (var file = await _httpClient.GetStreamAsync(attachment.Url))
+                using (var fileStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write))
+                {
+                    await file.CopyToAsync(fileStream);
+                }
+
+                var theme = new ThemeDetails
+                {
+                    UserId = Context.User.Id,
+                    AudioPath = filePath,
+                    Start = start,
+                    Duration = duration,
+                    Enabled = true
+                };
+
+                await _optionsService.WriteThemeAsync(theme);
+
             }
             catch(Exception ex)
             {

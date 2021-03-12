@@ -99,31 +99,61 @@ namespace keeganstudios.possebot
 
         public async Task WriteThemeAsync(ThemeDetails theme)
         {
-            await ReadThemeOptionsAsync();
-
-            if (_themeOptions == null)
+            try
             {
-                _themeOptions = new ThemeOptions();
+                theme = ValidateTheme(theme);
+
+                await ReadThemeOptionsAsync();
+
+                if (_themeOptions == null)
+                {
+                    _themeOptions = new ThemeOptions();
+                }
+
+                if (_themeOptions.Themes == null)
+                {
+                    _themeOptions.Themes = new List<ThemeDetails>();
+                }
+
+                _themeOptions.Themes = UpdateThemeCollection(theme);
+
+                await WriteThemeOptionsAsync(_themeOptions);
+                await ReloadThemesAsync();
+            }
+            catch(Exception ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine($"- {ex.StackTrace}");
+            }
+        }
+
+        public IEnumerable<ThemeDetails> UpdateThemeCollection(ThemeDetails theme)
+        {
+            var themeCollection = _themeOptions.Themes.ToList();
+
+            try
+            {
+                var collectionUpdated = false;
+                for (var i = 0; i < themeCollection.Count; i++)
+                {
+                    if (themeCollection[i].UserId == theme.UserId)
+                    {
+                        themeCollection[i] = theme;
+                        collectionUpdated = true;
+                    }
+                }
+                if (!collectionUpdated)
+                {
+                    themeCollection.Add(theme);
+                }
+            }
+            catch(Exception ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine($"- {ex.StackTrace}");
             }
 
-            if (_themeOptions.Themes == null)
-            {
-                _themeOptions.Themes = new List<ThemeDetails>();
-            }            
-
-            var existingTheme = await ReadUserThemeDetailsAsync(theme.UserId);
-            if (existingTheme != null)
-            {
-                existingTheme = theme;
-            }
-            else
-            {
-                var themeCollection = _themeOptions.Themes.ToList();
-                themeCollection.Add(theme);
-                _themeOptions.Themes = themeCollection;                
-            }
-            await WriteThemeOptionsAsync(_themeOptions);
-            await ReloadThemesAsync();            
+            return themeCollection;
         }
 
         public async Task WriteThemeOptionsAsync(ThemeOptions themeOptions)
@@ -142,6 +172,23 @@ namespace keeganstudios.possebot
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine($"- {ex.StackTrace}");
             }
+        }
+
+        public ThemeDetails ValidateTheme(ThemeDetails theme)
+        {
+            var newTheme = theme;
+
+            if (newTheme.Duration == 0)
+            {
+                theme.Duration = 15;
+            }
+
+            if (newTheme.Duration > 20)
+            {
+                theme.Duration = 20;
+            }
+
+            return newTheme;
         }
     }
 }
