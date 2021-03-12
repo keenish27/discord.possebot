@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 
 namespace keeganstudios.possebot
 {
-    public static class OptionsReader
+    public class OptionsReader : IOptionsReader
     {
-        public static async Task<ConfigurationOptions> ReadConfigurationOptions()
+        public async Task<ConfigurationOptions> ReadConfigurationOptions()
         {
             var option = new ConfigurationOptions();
             try
@@ -28,7 +28,7 @@ namespace keeganstudios.possebot
             return option;
         }
 
-        public static async Task<ThemeOptions> ReadThemeOptions()
+        public async Task<ThemeOptions> ReadThemeOptions()
         {
             var option = new ThemeOptions();
             try
