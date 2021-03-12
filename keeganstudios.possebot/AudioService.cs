@@ -1,7 +1,6 @@
 ﻿using Discord;
 using Discord.Audio;
 using Discord.Commands;
-using Discord.WebSocket;
 using keeganstudios.possebot.Models;
 using System;
 using System.Collections.Generic;
@@ -13,16 +12,14 @@ using System.Threading.Tasks;
 namespace keeganstudios.possebot
 {
     public class AudioService : IAudioService
-    {
-        private readonly DiscordSocketClient _client;
+    {        
         private Dictionary<ulong, IAudioClient> _audioClients = new Dictionary<ulong, IAudioClient>();        
 
-        public AudioService(DiscordSocketClient client)
+        public AudioService()
         {
-            _client = client;
+     
         }
 
-        [Command("jp", RunMode = RunMode.Async)]
         public Task ConnectToVoiceAndPlayTheme(IVoiceChannel voiceChannel, ThemeDetails theme)
         {
             _ = Task.Run(async () =>
@@ -161,7 +158,6 @@ namespace keeganstudios.possebot
             }
         }
 
-        [Command("disconnect", RunMode = RunMode.Async)]
         public Task DisconnectFromVoice(IVoiceChannel voiceChannel)
         {
             _ = Task.Run(async () =>

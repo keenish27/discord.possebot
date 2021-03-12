@@ -11,5 +11,6 @@ namespace keeganstudios.possebot.Models
         public ulong UserId { get; set; }
         public int Start { get; set; }
         public int Duration { get; set; }
+        public bool Enabled { get; set; }
     }
 }

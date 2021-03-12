@@ -1,12 +1,8 @@
 ﻿using Discord;
-using Discord.Audio;
 using Discord.Commands;
 using Discord.WebSocket;
-using keeganstudios.possebot.Models;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace keeganstudios.possebot
@@ -17,10 +13,7 @@ namespace keeganstudios.possebot
         private DiscordSocketClient _client;
         private CommandService _commands;
         private IAudioService _audioService;
-        private IOptionsReader _optionsReader;
-        private ConfigurationOptions _configOptions;
-        private ThemeOptions _themeOptions;
-        private Dictionary<ulong, IAudioClient> _audioClients = new Dictionary<ulong, IAudioClient>();
+        private IOptionsService _optionsService;        
 
         public async Task Run()
         {            
@@ -28,13 +21,14 @@ namespace keeganstudios.possebot
             _client = _services.GetRequiredService<DiscordSocketClient>();
             _commands = _services.GetRequiredService<CommandService>();
             _audioService = _services.GetRequiredService<IAudioService>();
-            _optionsReader = _services.GetRequiredService<IOptionsReader>();            
+            _optionsService = _services.GetRequiredService<IOptionsService>();            
 
             _client.Log += Log;
             _client.UserVoiceStateUpdated += OnVoiceStateUpdated;
-            
-            await LoadOptions();
-            await _client.LoginAsync(TokenType.Bot, _configOptions.Token);
+
+            var configOptions = await _optionsService.ReadConfigurationOptionsAsync();
+
+            await _client.LoginAsync(TokenType.Bot, configOptions.Token);
             await _client.StartAsync();
             await _services.GetRequiredService<CommandHandler>().InstallCommandsAsync();
 
@@ -47,9 +41,9 @@ namespace keeganstudios.possebot
             services.AddSingleton<DiscordSocketClient>();
             services.AddSingleton<CommandService>();
             services.AddSingleton<CommandHandler>();
-            services.AddSingleton<IOptionsReader, OptionsReader>();
+            services.AddSingleton<IOptionsService, OptionsService>();
             services.AddSingleton<IAudioService, AudioService>();
-
+            
             return services.BuildServiceProvider();
         }
 
@@ -70,9 +64,9 @@ namespace keeganstudios.possebot
             {
                 Console.WriteLine($"User (Name: {user.Username} ID: {user.Id}) joined to a VoiceChannel (Name: {state2.VoiceChannel.Name} ID: {state2.VoiceChannel.Id})");
 
-                var theme = _themeOptions.Themes.Where(x => x.UserId == user.Id).FirstOrDefault();
+                var theme = await _optionsService.ReadUserThemeDetailsAsync(user.Id);
 
-                if(theme != null)
+                if(theme != null && theme.Enabled)
                 {
                     Console.WriteLine($"Theme found for User (Name: {user.Username} ID: {user.Id}) at path: {theme.AudioPath}");
                     await _audioService.ConnectToVoiceAndPlayTheme(state2.VoiceChannel, theme);                          
@@ -84,13 +78,7 @@ namespace keeganstudios.possebot
                 //User left
                 Console.WriteLine($"User (Name: {user.Username} ID: {user.Id}) left from a VoiceChannel (Name: {state1.VoiceChannel.Name} ID: {state1.VoiceChannel.Id})");
             }
-        }
-
-        private async Task LoadOptions()
-        {
-            _configOptions = await _optionsReader.ReadConfigurationOptions();
-            _themeOptions = await _optionsReader.ReadThemeOptions();
-        }                
+        }    
 
         private async Task SendMessage(ulong id, string message)
         {
