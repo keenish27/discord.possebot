@@ -10,5 +10,6 @@ namespace keeganstudios.possebot
     {
         Task<ConfigurationOptions> ReadConfigurationOptions();
         Task<ThemeOptions> ReadThemeOptions();
+        Task<ThemeDetails> ReadUserThemeDetails(ulong userId);
     }
 }

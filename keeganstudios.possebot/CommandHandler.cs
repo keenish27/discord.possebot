@@ -1,8 +1,6 @@
 ﻿using Discord.Commands;
 using Discord.WebSocket;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -12,11 +10,13 @@ namespace keeganstudios.possebot
     {
         private readonly DiscordSocketClient _client;
         private readonly CommandService _commands;
+        private readonly IServiceProvider _services;
 
-        public CommandHandler(DiscordSocketClient client, CommandService commands)
+        public CommandHandler(DiscordSocketClient client, CommandService commands, IServiceProvider services)
         {
             _commands = commands;
             _client = client;
+            _services = services;
         }
 
         public async Task InstallCommandsAsync()
@@ -33,7 +33,7 @@ namespace keeganstudios.possebot
             // If you do not use Dependency Injection, pass null.
             // See Dependency Injection guide for more information.
             await _commands.AddModulesAsync(assembly: Assembly.GetEntryAssembly(),
-                                            services: null);
+                                            services: _services);
         }
 
         private async Task HandleCommandAsync(SocketMessage messageParam)
@@ -59,7 +59,7 @@ namespace keeganstudios.possebot
             await _commands.ExecuteAsync(
                 context: context,
                 argPos: argPos,
-                services: null);
+                services: _services);
         }
     }
 }

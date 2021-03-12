@@ -11,38 +11,60 @@ namespace keeganstudios.possebot
 {
     public class OptionsReader : IOptionsReader
     {
+        private ConfigurationOptions _configurationOptions;
+        private ThemeOptions _themeOptions;
+
         public async Task<ConfigurationOptions> ReadConfigurationOptions()
         {
-            var option = new ConfigurationOptions();
-            try
+            if (_configurationOptions == null)
             {
-                var json = JObject.Parse(await File.ReadAllTextAsync("settings.json"));
-                option = JsonConvert.DeserializeObject<ConfigurationOptions>(json.GetValue("configuration").ToString());
+                try
+                {
+                    var json = JObject.Parse(await File.ReadAllTextAsync("settings.json"));
+                    _configurationOptions = JsonConvert.DeserializeObject<ConfigurationOptions>(json.GetValue("configuration").ToString());
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine(ex.Message);
+                    Console.Error.WriteLine($"- {ex.StackTrace}");
+                }
             }
-            catch(Exception ex)
-            {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
-            }
-
-            return option;
+            return _configurationOptions;
         }
 
         public async Task<ThemeOptions> ReadThemeOptions()
         {
-            var option = new ThemeOptions();
+            if (_themeOptions == null)
+            {
+                try
+                {
+                    var json = JObject.Parse(await File.ReadAllTextAsync("themes.json"));
+                    _themeOptions = JsonConvert.DeserializeObject<ThemeOptions>(json.ToString());
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine(ex.Message);
+                    Console.Error.WriteLine($"- {ex.StackTrace}");
+                }
+            }
+            return _themeOptions;
+        }
+
+        public async Task<ThemeDetails> ReadUserThemeDetails(ulong userId)
+        {
+            ThemeDetails theme = null;
             try
             {
-                var json = JObject.Parse(await File.ReadAllTextAsync("themes.json"));
-                option = JsonConvert.DeserializeObject<ThemeOptions>(json.ToString());
+                var themeOptions = await ReadThemeOptions();
+                theme = themeOptions.Themes.Where(x => x.UserId == userId).FirstOrDefault();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine($"- {ex.StackTrace}");
             }
 
-            return option;
+            return theme;
         }
     }
 }
