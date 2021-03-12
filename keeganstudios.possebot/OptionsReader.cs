@@ -13,8 +13,19 @@ namespace keeganstudios.possebot
     {
         public static async Task<ConfigurationOptions> ReadConfigurationOptions()
         {
-            var json = JObject.Parse(await File.ReadAllTextAsync("settings.json"));
-            return JsonConvert.DeserializeObject<ConfigurationOptions>(json.GetValue("configuration").ToString());
+            var option = new ConfigurationOptions();
+            try
+            {
+                var json = JObject.Parse(await File.ReadAllTextAsync("settings.json"));
+                option = JsonConvert.DeserializeObject<ConfigurationOptions>(json.GetValue("configuration").ToString());
+            }
+            catch(Exception ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine($"- {ex.StackTrace}");
+            }
+
+            return option;
         }
 
         public static async Task<ThemeOptions> ReadThemeOptions()
@@ -28,6 +39,7 @@ namespace keeganstudios.possebot
             catch(Exception ex)
             {
                 Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine($"- {ex.StackTrace}");
             }
 
             return option;
