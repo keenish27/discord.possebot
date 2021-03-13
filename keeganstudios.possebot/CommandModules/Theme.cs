@@ -1,9 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
-using Discord.WebSocket;
 using keeganstudios.possebot.Models;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -16,6 +14,7 @@ namespace keeganstudios.possebot.CommandModules
         private readonly IAudioService _audioService;
         private readonly IOptionsService _optionsService;
         private readonly HttpClient _httpClient;
+        private string[] _acceptedAudioFileExtensions = { ".mp3" };
 
         public Theme(IAudioService audioService, IOptionsService optionsService, HttpClient httpClient)
         {     
@@ -112,10 +111,17 @@ namespace keeganstudios.possebot.CommandModules
         {
             try
             {
-                var attachment = Context.Message.Attachments.FirstOrDefault();
+                var attachment = Context.Message.Attachments.FirstOrDefault();               
                 if(attachment == null)
                 {
                     await ReplyAsync($"{Context.User.Mention} no file was attached.");
+                    return;
+                }
+
+                var fileExtension = Path.GetExtension(attachment.Filename);
+                if (!_acceptedAudioFileExtensions.Any(x => x == fileExtension))
+                {
+                    await ReplyAsync($"{Context.User.Mention}, \"{fileExtension}\" is not an accepted file type");
                     return;
                 }
 
@@ -147,6 +153,7 @@ namespace keeganstudios.possebot.CommandModules
                 };
 
                 await _optionsService.WriteThemeAsync(theme);
+                await ReplyAsync($"{Context.User.Mention}, you're theme has been updated!");
 
             }
             catch(Exception ex)
