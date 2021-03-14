@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using keeganstudios.possebot.Services;
 using keeganstudios.possebot.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -47,6 +48,7 @@ namespace keeganstudios.possebot
             services.AddSingleton<IOptionsService, OptionsService>();
             services.AddSingleton<IAudioService, AudioService>();
             services.AddSingleton<ICommandUtils, CommandUtils>();
+            services.AddSingleton<IFileUtils, FileUtils>();
             
             return services.BuildServiceProvider();
         }

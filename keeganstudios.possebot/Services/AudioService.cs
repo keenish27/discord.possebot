@@ -9,7 +9,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace keeganstudios.possebot
+namespace keeganstudios.possebot.Services
 {
     public class AudioService : IAudioService
     {        

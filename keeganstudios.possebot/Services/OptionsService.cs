@@ -7,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace keeganstudios.possebot
+namespace keeganstudios.possebot.Services
 {
     public class OptionsService : IOptionsService
     {
