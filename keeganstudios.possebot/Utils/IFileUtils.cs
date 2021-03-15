@@ -8,6 +8,7 @@ namespace keeganstudios.possebot.Utils
     public interface IFileUtils
     {
         string BuildAudioFilePath(ulong guildId);
+        string CleanFileName(string fileName);
         Task SaveAudioFile(string filePath, string attachmentUrl);
     }
 }

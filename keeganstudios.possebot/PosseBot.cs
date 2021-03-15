@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using DotNetTools.SharpGrabber.Internal.Grabbers;
 using keeganstudios.possebot.Services;
 using keeganstudios.possebot.Utils;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,6 +50,7 @@ namespace keeganstudios.possebot
             services.AddSingleton<IAudioService, AudioService>();
             services.AddSingleton<ICommandUtils, CommandUtils>();
             services.AddSingleton<IFileUtils, FileUtils>();
+            services.AddSingleton<YouTubeGrabber>();
             
             return services.BuildServiceProvider();
         }

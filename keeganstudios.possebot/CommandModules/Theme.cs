@@ -1,5 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
+using DotNetTools.SharpGrabber.Internal.Grabbers;
+using DotNetTools.SharpGrabber.Media;
 using keeganstudios.possebot.Models;
 using keeganstudios.possebot.Services;
 using keeganstudios.possebot.Utils;
@@ -16,15 +18,17 @@ namespace keeganstudios.possebot.CommandModules
         private readonly IOptionsService _optionsService;        
         private readonly ICommandUtils _commandUtils;
         private readonly IFileUtils _fileUtils;
+        private readonly YouTubeGrabber _grabber;
 
         private string[] _acceptedAudioFileExtensions = { ".mp3" };
 
-        public Theme(IAudioService audioService, IOptionsService optionsService, ICommandUtils commandUtils, IFileUtils fileUtils)
+        public Theme(IAudioService audioService, IOptionsService optionsService, ICommandUtils commandUtils, IFileUtils fileUtils, YouTubeGrabber grabber)
         {     
             _audioService = audioService;
             _optionsService = optionsService;            
             _commandUtils = commandUtils;
             _fileUtils = fileUtils;
+            _grabber = grabber;
         }       
 
         [Command("ping")]
@@ -149,6 +153,63 @@ namespace keeganstudios.possebot.CommandModules
             }
             catch(Exception ex)
             {
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine($"- {ex.StackTrace}");
+            }
+        }
+
+        [Command("theme-grab", RunMode = RunMode.Async)]
+        [Alias("tg")]
+        [Summary("Updates a user theme with audio from youtube url")]
+        public async Task ThemeGrabAsync([Summary("Youtube Url")] string url, [Summary("Position to start in seconds")] int start, [Summary("Length of time to play in seconds")] int duration)
+        {
+            try
+            {
+                var result = await _grabber.GrabAsync(new Uri(url));
+
+                await ReplyAsync($"Hey {Context.User.Mention}, I'm going to grab {result.Title} and set that as your theme. This can take a few minutes so hang tight.");
+
+                GrabbedMedia resourceToSave = null;
+                var grabbedAudioResources = result.Resources.Where(x => x.GetType() == typeof(GrabbedMedia) && (x as GrabbedMedia).Channels == MediaChannels.Audio).Select(x => x as GrabbedMedia).ToList();
+                
+                if (grabbedAudioResources.Count > 0)
+                {
+                    var maxBitrate = grabbedAudioResources.Where(x => int.Parse(x.BitRateString.Substring(0, x.BitRateString.LastIndexOf("k"))) <= 128).Max(x => int.Parse(x.BitRateString.Substring(0, x.BitRateString.LastIndexOf("k"))));
+                    resourceToSave = grabbedAudioResources.Where(x => x.BitRateString == $"{maxBitrate}k").FirstOrDefault();
+                }
+
+                if (resourceToSave == null)
+                {
+                    await ReplyAsync($"Hey {Context.User.Mention}, I didn't find any usable audio streams for {result.Title}. Please try a different url.");
+                    return;
+                }
+
+                var fileName = _fileUtils.CleanFileName(result.Title);
+                var filePath = Path.Combine(_fileUtils.BuildAudioFilePath(Context.Guild.Id), $"{fileName}.{resourceToSave.Format.Extension}");
+
+                if (!File.Exists(filePath))
+                {
+                    Console.WriteLine($"Saving stream from: {resourceToSave.ResourceUri} to file: {filePath}");
+                    await _fileUtils.SaveAudioFile(filePath, grabbedAudioResources[0].ResourceUri.ToString());
+                    Console.WriteLine($"Saved stream from: {resourceToSave.ResourceUri} to file: {filePath}");
+                }
+
+                var theme = new ThemeDetails
+                {
+                    UserId = Context.User.Id,
+                    GuildId = Context.Guild.Id,
+                    AudioPath = filePath,
+                    Start = start,
+                    Duration = duration,
+                    Enabled = true
+                };
+
+                await _optionsService.WriteThemeAsync(theme);
+                await ReplyAsync($"Hey {Context.User.Mention}, you're theme has been updated to {result.Title}!");
+            }
+            catch (Exception ex)
+            {
+                await ReplyAsync($"Hey { Context.User.Mention}, I ran into a problem and couldn't set your theme 😢.");
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine($"- {ex.StackTrace}");
             }
