@@ -1,8 +1,6 @@
 ﻿using Discord;
 using Discord.Commands;
 using DotNetTools.SharpGrabber.Internal.Grabbers;
-using DotNetTools.SharpGrabber.Media;
-using keeganstudios.possebot.Models;
 using keeganstudios.possebot.Services;
 using keeganstudios.possebot.Utils;
 using System;
@@ -20,7 +18,7 @@ namespace keeganstudios.possebot.CommandModules
         private readonly IFileUtils _fileUtils;
         private readonly YouTubeGrabber _grabber;
 
-        private string[] _acceptedAudioFileExtensions = { ".mp3" };
+        private string[] _acceptedAudioFileExtensions = { ".mp3", ".m4a" };
 
         public Theme(IAudioService audioService, IOptionsService optionsService, ICommandUtils commandUtils, IFileUtils fileUtils, YouTubeGrabber grabber)
         {     
@@ -29,22 +27,7 @@ namespace keeganstudios.possebot.CommandModules
             _commandUtils = commandUtils;
             _fileUtils = fileUtils;
             _grabber = grabber;
-        }       
-
-        [Command("ping")]
-        [Summary("Pings the bot and he pongs you back.")]
-        public async Task Ping()
-        {
-            try
-            {
-                await ReplyAsync($"Pong!, {Context.User.Mention}!");
-            }
-            catch(Exception ex)
-            {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
-            }
-        }        
+        }               
 
         [Command("announce-me", RunMode = RunMode.Async)]
         [Alias("am")]
@@ -65,13 +48,13 @@ namespace keeganstudios.possebot.CommandModules
 
                 if(theme == null)
                 {
-                    await ReplyAsync($"Hey {Context.User.Mention}, you don't have a theme. Use {await _commandUtils.BuildCommand("theme-attach", true)} to learn how to set a theme.");
+                    await ReplyAsync($"Hey {Context.User.Mention}, you don't have a theme. Use {await _commandUtils.BuildCommandAsync("theme-attach", true)} to learn how to set a theme.");
                     return;
                 }
 
                 if (!theme.Enabled)
                 {
-                    await ReplyAsync($"Hey {Context.User.Mention}, you're theme isn't enabled. Use {await _commandUtils.BuildCommand("theme-enable", true)} to learn how to enable your theme.");
+                    await ReplyAsync($"Hey {Context.User.Mention}, you're theme isn't enabled. Use {await _commandUtils.BuildCommandAsync("theme-enable", true)} to learn how to enable your theme.");
                     return;
                 }
 
@@ -79,6 +62,7 @@ namespace keeganstudios.possebot.CommandModules
             }
             catch(Exception ex)
             {
+                await ReplyAsync($"Hey { Context.User.Mention}, I ran into a problem and couldn't announce you 😢.");
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine($"- {ex.StackTrace}");
             }
@@ -95,7 +79,7 @@ namespace keeganstudios.possebot.CommandModules
 
                 if (theme == null)
                 {
-                    await ReplyAsync($"Hey {Context.User.Mention}, I don't see a theme for you. Please use {await _commandUtils.BuildCommand("theme-attach", true)} to learn how to set a theme.");
+                    await ReplyAsync($"Hey {Context.User.Mention}, I don't see a theme for you. Please use {await _commandUtils.BuildCommandAsync("theme-attach", true)} to learn how to set a theme.");
                     return;
                 }
 
@@ -108,6 +92,7 @@ namespace keeganstudios.possebot.CommandModules
             }
             catch(Exception ex)
             {
+                await ReplyAsync($"Hey { Context.User.Mention}, I ran into a problem and couldn't enable/disable your theme 😢.");
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine($"- {ex.StackTrace}");
             }
@@ -130,22 +115,14 @@ namespace keeganstudios.possebot.CommandModules
                 var fileExtension = Path.GetExtension(attachment.Filename);
                 if (!_acceptedAudioFileExtensions.Any(x => x == fileExtension))
                 {
-                    await ReplyAsync($"Hey {Context.User.Mention}, \"{fileExtension}\" is not an accepted file type");
+                    await ReplyAsync($"Hey {Context.User.Mention}, \"{fileExtension}\" is not an accepted file type. I can accept {string.Join(", " ,_acceptedAudioFileExtensions)} files.");
                     return;
                 }
 
                 var filePath = Path.Combine(_fileUtils.BuildAudioFilePath(Context.Guild.Id) , attachment.Filename);
-                await _fileUtils.SaveAudioFile(filePath, attachment.Url);                
+                await _fileUtils.SaveAudioFile(filePath, attachment.Url);
 
-                var theme = new ThemeDetails
-                {
-                    UserId = Context.User.Id,
-                    GuildId = Context.Guild.Id,
-                    AudioPath = filePath,
-                    Start = start,
-                    Duration = duration,
-                    Enabled = true
-                };
+                var theme = _optionsService.CreateTheme(Context.User.Id, Context.Guild.Id, filePath, start, duration, true);                
 
                 await _optionsService.WriteThemeAsync(theme);
                 await ReplyAsync($"Hey {Context.User.Mention}, you're theme has been updated!");
@@ -153,6 +130,7 @@ namespace keeganstudios.possebot.CommandModules
             }
             catch(Exception ex)
             {
+                await ReplyAsync($"Hey { Context.User.Mention}, I ran into a problem and couldn't set your theme 😢.");
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine($"- {ex.StackTrace}");
             }
@@ -167,17 +145,10 @@ namespace keeganstudios.possebot.CommandModules
             {
                 var result = await _grabber.GrabAsync(new Uri(url));
 
-                await ReplyAsync($"Hey {Context.User.Mention}, I'm going to grab {result.Title} and set that as your theme. This can take a few minutes so hang tight.");
+                await ReplyAsync($"Hey {Context.User.Mention}, I'm going to grab {result.Title} and set that as your theme. This can take a few minutes so hang tight. I'll let you know when I'm done.");
 
-                GrabbedMedia resourceToSave = null;
-                var grabbedAudioResources = result.Resources.Where(x => x.GetType() == typeof(GrabbedMedia) && (x as GrabbedMedia).Channels == MediaChannels.Audio).Select(x => x as GrabbedMedia).ToList();
-                
-                if (grabbedAudioResources.Count > 0)
-                {
-                    var maxBitrate = grabbedAudioResources.Where(x => int.Parse(x.BitRateString.Substring(0, x.BitRateString.LastIndexOf("k"))) <= 128).Max(x => int.Parse(x.BitRateString.Substring(0, x.BitRateString.LastIndexOf("k"))));
-                    resourceToSave = grabbedAudioResources.Where(x => x.BitRateString == $"{maxBitrate}k").FirstOrDefault();
-                }
-
+                var resourceToSave = _commandUtils.GetGrabbedMediaToSave(result.Resources);
+               
                 if (resourceToSave == null)
                 {
                     await ReplyAsync($"Hey {Context.User.Mention}, I didn't find any usable audio streams for {result.Title}. Please try a different url.");
@@ -188,24 +159,14 @@ namespace keeganstudios.possebot.CommandModules
                 var filePath = Path.Combine(_fileUtils.BuildAudioFilePath(Context.Guild.Id), $"{fileName}.{resourceToSave.Format.Extension}");
 
                 if (!File.Exists(filePath))
-                {
-                    Console.WriteLine($"Saving stream from: {resourceToSave.ResourceUri} to file: {filePath}");
-                    await _fileUtils.SaveAudioFile(filePath, grabbedAudioResources[0].ResourceUri.ToString());
-                    Console.WriteLine($"Saved stream from: {resourceToSave.ResourceUri} to file: {filePath}");
+                {   
+                    await _fileUtils.SaveAudioFile(filePath, resourceToSave.ResourceUri.ToString());                    
                 }
 
-                var theme = new ThemeDetails
-                {
-                    UserId = Context.User.Id,
-                    GuildId = Context.Guild.Id,
-                    AudioPath = filePath,
-                    Start = start,
-                    Duration = duration,
-                    Enabled = true
-                };
+                var theme = _optionsService.CreateTheme(Context.User.Id, Context.Guild.Id, filePath, start, duration, true);
 
                 await _optionsService.WriteThemeAsync(theme);
-                await ReplyAsync($"Hey {Context.User.Mention}, you're theme has been updated to {result.Title}!");
+                await ReplyAsync($"Hey {Context.User.Mention}, you're theme has been updated to {result.Title}! Use the {await _commandUtils.BuildCommandAsyc("announce-me")} to hear it.");
             }
             catch (Exception ex)
             {
@@ -226,7 +187,7 @@ namespace keeganstudios.possebot.CommandModules
                 
                 if(theme == null)
                 {
-                    await ReplyAsync($"Hey {Context.User.Mention}, you don't have a theme set. Please use {await _commandUtils.BuildCommand("theme-attach", true)} to learn how to set you're own theme.");
+                    await ReplyAsync($"Hey {Context.User.Mention}, you don't have a theme set. Please use {await _commandUtils.BuildCommandAsync("theme-attach", true)} to learn how to set you're own theme.");
                     return;
                 }
 
@@ -241,13 +202,14 @@ namespace keeganstudios.possebot.CommandModules
                         x.Value += $"\n**Duration**: {theme.Duration} second(s)";
                         x.Value += $"\n**Enabled**: {theme.Enabled}";
                         });
-                    builder.WithFooter($"To hear your current theme use {await _commandUtils.BuildCommand("announce-me")}.");
+                    builder.WithFooter($"To hear your current theme use {await _commandUtils.BuildCommandAsyc("announce-me")}.");
                 }
 
                 await ReplyAsync(string.Empty, false, builder.Build());
             }
             catch(Exception ex)
             {
+                await ReplyAsync($"Hey { Context.User.Mention}, I ran into a problem and couldn't get your theme info 😢.");
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine($"- {ex.StackTrace}");
             }

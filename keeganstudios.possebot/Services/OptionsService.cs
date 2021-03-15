@@ -175,6 +175,18 @@ namespace keeganstudios.possebot.Services
             }
         }
 
+        public ThemeDetails CreateTheme(ulong userId, ulong guildId, string audioPath, int start, int duration, bool enabled)
+        {
+            return new ThemeDetails
+            {
+                UserId = userId,
+                GuildId = guildId,
+                AudioPath = audioPath,
+                Start = start,
+                Duration = duration,
+                Enabled = enabled
+            };
+        }
         public ThemeDetails ValidateTheme(ThemeDetails theme)
         {
             var newTheme = theme;
