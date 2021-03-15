@@ -57,7 +57,7 @@ namespace keeganstudios.possebot.CommandModules
                     await ReplyAsync($"Hey {Context.User.Mention}, you must be in a voice channel!");
                     return;
                 }
-                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.User.Id);
+                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.Guild.Id, Context.User.Id);
 
                 if(theme == null)
                 {
@@ -87,7 +87,7 @@ namespace keeganstudios.possebot.CommandModules
         {
             try
             {
-                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.User.Id);
+                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.Guild.Id, Context.User.Id);
 
                 if (theme == null)
                 {
@@ -136,6 +136,7 @@ namespace keeganstudios.possebot.CommandModules
                 var theme = new ThemeDetails
                 {
                     UserId = Context.User.Id,
+                    GuildId = Context.Guild.Id,
                     AudioPath = filePath,
                     Start = start,
                     Duration = duration,
@@ -160,7 +161,7 @@ namespace keeganstudios.possebot.CommandModules
         {
             try
             {                
-                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.User.Id);
+                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.Guild.Id, Context.User.Id);
                 
                 if(theme == null)
                 {

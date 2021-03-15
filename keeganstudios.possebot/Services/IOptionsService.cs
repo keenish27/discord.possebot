@@ -10,7 +10,7 @@ namespace keeganstudios.possebot.Services
     {
         Task<ConfigurationOptions> ReadConfigurationOptionsAsync();
         Task<ThemeOptions> ReadThemeOptionsAsync();
-        Task<ThemeDetails> ReadUserThemeDetailsAsync(ulong userId);
+        Task<ThemeDetails> ReadUserThemeDetailsAsync(ulong guildId, ulong userId);
         Task ReloadThemesAsync();
         Task WriteThemeAsync(ThemeDetails theme);
     }
