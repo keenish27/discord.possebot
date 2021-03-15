@@ -43,17 +43,29 @@ namespace keeganstudios.possebot.Utils
             return cleanFileName;
         }
 
-        public async Task SaveAudioFile(string filePath, string attachmentUrl)
+        public async Task SaveAudioFile(string filePath, string streamUrl)
         {
-            if (File.Exists(filePath))
+            try
             {
-                File.Delete(filePath);
-            }
+                Console.WriteLine($"Saving stream from: {streamUrl} to file: {filePath}");
 
-            using (var file = await _httpClient.GetStreamAsync(attachmentUrl))
-            using (var fileStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write))
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                }
+
+                using (var file = await _httpClient.GetStreamAsync(streamUrl))
+                using (var fileStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write))
+                {
+                    await file.CopyToAsync(fileStream);
+                }
+                Console.WriteLine($"Saved stream from: {streamUrl} to file: {filePath}");
+            }
+            catch(Exception ex)
             {
-                await file.CopyToAsync(fileStream);
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine($"- {ex.StackTrace}");
+                throw;
             }
         }
     }
