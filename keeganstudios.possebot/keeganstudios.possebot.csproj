@@ -8,6 +8,7 @@
     <PackageReference Include="Discord.Net.Core" Version="2.3.1" />
     <PackageReference Include="Discord.Net.WebSocket" Version="2.3.1" />
     <PackageReference Include="Discord.Net.Commands" Version="2.3.1" />
+    <PackageReference Include="SharpGrabber" Version="1.5.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="ffmpeg.exe">

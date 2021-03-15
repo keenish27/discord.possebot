@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace keeganstudios.possebot.Utils
@@ -24,6 +23,24 @@ namespace keeganstudios.possebot.Utils
             }
 
             return path;
+        }
+
+        public string CleanFileName(string fileName)
+        {
+            string cleanFileName = string.Empty;
+            try
+            {
+                Regex illegalInFileName = new Regex(string.Format("[{0}]", Regex.Escape(new string(Path.GetInvalidFileNameChars()))), RegexOptions.Compiled);
+                cleanFileName = illegalInFileName.Replace(fileName, "");
+            }
+            catch(Exception ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine($"- {ex.StackTrace}");
+                throw;
+            }
+
+            return cleanFileName;
         }
 
         public async Task SaveAudioFile(string filePath, string attachmentUrl)
