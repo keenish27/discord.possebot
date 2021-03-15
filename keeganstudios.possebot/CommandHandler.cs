@@ -1,5 +1,6 @@
 ﻿using Discord.Commands;
 using Discord.WebSocket;
+using keeganstudios.possebot.Services;
 using System;
 using System.Reflection;
 using System.Threading.Tasks;

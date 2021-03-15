@@ -7,7 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace keeganstudios.possebot
+namespace keeganstudios.possebot.Services
 {
     public interface IAudioService
     {

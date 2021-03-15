@@ -7,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace keeganstudios.possebot
+namespace keeganstudios.possebot.Services
 {
     public class OptionsService : IOptionsService
     {
@@ -58,17 +58,18 @@ namespace keeganstudios.possebot
             return _themeOptions;
         }
 
-        public async Task<ThemeDetails> ReadUserThemeDetailsAsync(ulong userId)
+        public async Task<ThemeDetails> ReadUserThemeDetailsAsync(ulong guildId, ulong userId)
         {
             ThemeDetails theme = null;
             try
             {
-                Console.WriteLine($"Reading ThemeDetails for User Id: {userId}");
+                Console.WriteLine($"Reading ThemeDetails for Guild Id: {guildId} User Id: {userId}");
 
                 var themeOptions = await ReadThemeOptionsAsync();
-                theme = themeOptions.Themes.Where(x => x.UserId == userId).FirstOrDefault();
+                
+                theme = themeOptions.Themes.Where(x => x.GuildId == guildId && x.UserId == userId).FirstOrDefault();                
 
-                Console.WriteLine($"Read ThemeDetails for User Id: {userId}");
+                Console.WriteLine($"Read ThemeDetails for Guild Id: {guildId} User Id: {userId}");
             }
             catch (Exception ex)
             {
@@ -136,7 +137,7 @@ namespace keeganstudios.possebot
                 var collectionUpdated = false;
                 for (var i = 0; i < themeCollection.Count; i++)
                 {
-                    if (themeCollection[i].UserId == theme.UserId)
+                    if (themeCollection[i].GuildId == theme.GuildId && themeCollection[i].UserId == theme.UserId)
                     {
                         themeCollection[i] = theme;
                         collectionUpdated = true;

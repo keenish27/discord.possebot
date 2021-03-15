@@ -1,11 +1,11 @@
 ﻿using Discord;
 using Discord.Commands;
 using keeganstudios.possebot.Models;
+using keeganstudios.possebot.Services;
 using keeganstudios.possebot.Utils;
 using System;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace keeganstudios.possebot.CommandModules
@@ -13,18 +13,18 @@ namespace keeganstudios.possebot.CommandModules
     public class Theme : ModuleBase<SocketCommandContext>
     {        
         private readonly IAudioService _audioService;
-        private readonly IOptionsService _optionsService;
-        private readonly HttpClient _httpClient;
+        private readonly IOptionsService _optionsService;        
         private readonly ICommandUtils _commandUtils;
+        private readonly IFileUtils _fileUtils;
 
         private string[] _acceptedAudioFileExtensions = { ".mp3" };
 
-        public Theme(IAudioService audioService, IOptionsService optionsService, HttpClient httpClient, ICommandUtils commandUtils)
+        public Theme(IAudioService audioService, IOptionsService optionsService, ICommandUtils commandUtils, IFileUtils fileUtils)
         {     
             _audioService = audioService;
-            _optionsService = optionsService;
-            _httpClient = httpClient;
+            _optionsService = optionsService;            
             _commandUtils = commandUtils;
+            _fileUtils = fileUtils;
         }       
 
         [Command("ping")]
@@ -57,7 +57,7 @@ namespace keeganstudios.possebot.CommandModules
                     await ReplyAsync($"Hey {Context.User.Mention}, you must be in a voice channel!");
                     return;
                 }
-                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.User.Id);
+                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.Guild.Id, Context.User.Id);
 
                 if(theme == null)
                 {
@@ -87,7 +87,7 @@ namespace keeganstudios.possebot.CommandModules
         {
             try
             {
-                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.User.Id);
+                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.Guild.Id, Context.User.Id);
 
                 if (theme == null)
                 {
@@ -130,27 +130,13 @@ namespace keeganstudios.possebot.CommandModules
                     return;
                 }
 
-                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "files", attachment.Filename);
-
-                if (!Directory.Exists(Path.GetDirectoryName(filePath)))
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(filePath));
-                }
-
-                if (File.Exists(filePath))
-                {
-                    File.Delete(filePath);
-                }
-
-                using (var file = await _httpClient.GetStreamAsync(attachment.Url))
-                using (var fileStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write))
-                {
-                    await file.CopyToAsync(fileStream);
-                }
+                var filePath = Path.Combine(_fileUtils.BuildAudioFilePath(Context.Guild.Id) , attachment.Filename);
+                await _fileUtils.SaveAudioFile(filePath, attachment.Url);                
 
                 var theme = new ThemeDetails
                 {
                     UserId = Context.User.Id,
+                    GuildId = Context.Guild.Id,
                     AudioPath = filePath,
                     Start = start,
                     Duration = duration,
@@ -175,7 +161,7 @@ namespace keeganstudios.possebot.CommandModules
         {
             try
             {                
-                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.User.Id);
+                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.Guild.Id, Context.User.Id);
                 
                 if(theme == null)
                 {

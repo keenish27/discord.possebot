@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using keeganstudios.possebot.Services;
 using keeganstudios.possebot.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -47,6 +48,7 @@ namespace keeganstudios.possebot
             services.AddSingleton<IOptionsService, OptionsService>();
             services.AddSingleton<IAudioService, AudioService>();
             services.AddSingleton<ICommandUtils, CommandUtils>();
+            services.AddSingleton<IFileUtils, FileUtils>();
             
             return services.BuildServiceProvider();
         }
@@ -66,9 +68,9 @@ namespace keeganstudios.possebot
             
             if (state1.VoiceChannel == null && state2.VoiceChannel != null)
             {
-                Console.WriteLine($"User (Name: {user.Username} ID: {user.Id}) joined to a VoiceChannel (Name: {state2.VoiceChannel.Name} ID: {state2.VoiceChannel.Id})");
+                Console.WriteLine($"User (Name: {user.Username} ID: {user.Id}) joined to a VoiceChannel (Name: {state2.VoiceChannel.Name} Id: {state2.VoiceChannel.Id}) Guild Id: {state2.VoiceChannel.Guild.Id}");
 
-                var theme = await _optionsService.ReadUserThemeDetailsAsync(user.Id);
+                var theme = await _optionsService.ReadUserThemeDetailsAsync(state2.VoiceChannel.Guild.Id, user.Id);
 
                 if(theme != null && theme.Enabled)
                 {

@@ -1,6 +1,5 @@
 ﻿using Discord;
 using Discord.Audio;
-using Discord.Commands;
 using keeganstudios.possebot.Models;
 using System;
 using System.Collections.Generic;
@@ -9,11 +8,11 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace keeganstudios.possebot
+namespace keeganstudios.possebot.Services
 {
     public class AudioService : IAudioService
     {        
-        private Dictionary<ulong, IAudioClient> _audioClients = new Dictionary<ulong, IAudioClient>();        
+        private Dictionary<ulong, AudioClientInfo> _audioClients = new Dictionary<ulong, AudioClientInfo>();        
 
         public AudioService()
         {
@@ -42,19 +41,20 @@ namespace keeganstudios.possebot
                             return;
                         }
 
-                        _audioClients.TryGetValue(voiceChannel.Id, out var audioClient);
+                        _audioClients.TryGetValue(voiceChannel.Guild.Id, out var audioClientInfo);                        
 
-                        if (audioClient == null || audioClient.ConnectionState == ConnectionState.Disconnected)
-                        {
-                            Console.WriteLine($"Connecting to channel {voiceChannel.Id}");
+                        if (audioClientInfo == null || !audioClientInfo.IsPlaying)
+                        {                            
+                            Console.WriteLine($"Connecting to channel {voiceChannel.Id} in Guild Id: {voiceChannel.Guild.Id}");
 
-                            audioClient = await voiceChannel.ConnectAsync();
+                            var audioClient = await voiceChannel.ConnectAsync();
 
-                            if (!_audioClients.ContainsKey(voiceChannel.Id))
+                            if (!_audioClients.ContainsKey(voiceChannel.Guild.Id))
                             {
-                                Console.WriteLine($"Adding audio client {voiceChannel.Id}");
-                                _audioClients.Add(voiceChannel.Id, audioClient);
-                                Console.WriteLine($"Added audio client {voiceChannel.Id}");
+                                audioClientInfo = new AudioClientInfo { AudioClient = audioClient, IsPlaying = true };
+                                Console.WriteLine($"Adding audio client {voiceChannel.Guild.Id}");
+                                _audioClients.Add(voiceChannel.Guild.Id, audioClientInfo);                                
+                                Console.WriteLine($"Added audio client {voiceChannel.Guild.Id}");
                             }
 
                             Console.WriteLine($"Connected to channel {voiceChannel.Id}");
@@ -62,6 +62,7 @@ namespace keeganstudios.possebot
                             await Task.Delay(1000);
                             await PlayAudioFile(audioClient, theme);                            
                             await DisconnectFromVoice(voiceChannel);
+                            audioClientInfo.IsPlaying = false;
                             success = true;
                         }
                     }
@@ -70,7 +71,7 @@ namespace keeganstudios.possebot
                         retryCount++;
                         Console.WriteLine($"Exception: {ex.Message}");
                         Console.Error.WriteLine($"- {ex.StackTrace}");                        
-                    }                    
+                    }
                 }
             });
             return Task.CompletedTask;
