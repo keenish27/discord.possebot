@@ -68,7 +68,7 @@ namespace keeganstudios.possebot
             
             if (state1.VoiceChannel == null && state2.VoiceChannel != null)
             {
-                Console.WriteLine($"User (Name: {user.Username} ID: {user.Id}) joined to a VoiceChannel (Name: {state2.VoiceChannel.Name} ID: {state2.VoiceChannel.Id})");
+                Console.WriteLine($"User (Name: {user.Username} ID: {user.Id}) joined to a VoiceChannel (Name: {state2.VoiceChannel.Name} Id: {state2.VoiceChannel.Id}) Guild Id: {state2.VoiceChannel.Guild.Id}");
 
                 var theme = await _optionsService.ReadUserThemeDetailsAsync(user.Id);
 
