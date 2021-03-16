@@ -3,6 +3,7 @@ using Discord.Commands;
 using DotNetTools.SharpGrabber.Internal.Grabbers;
 using keeganstudios.possebot.Services;
 using keeganstudios.possebot.Utils;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Linq;
@@ -11,7 +12,8 @@ using System.Threading.Tasks;
 namespace keeganstudios.possebot.CommandModules
 {
     public class Theme : ModuleBase<SocketCommandContext>
-    {        
+    {
+        private readonly ILogger<Theme> _logger;
         private readonly IAudioService _audioService;
         private readonly IOptionsService _optionsService;        
         private readonly ICommandUtils _commandUtils;
@@ -20,8 +22,9 @@ namespace keeganstudios.possebot.CommandModules
 
         private string[] _acceptedAudioFileExtensions = { ".mp3", ".m4a" };
 
-        public Theme(IAudioService audioService, IOptionsService optionsService, ICommandUtils commandUtils, IFileUtils fileUtils, YouTubeGrabber grabber)
-        {     
+        public Theme(ILogger<Theme> logger, IAudioService audioService, IOptionsService optionsService, ICommandUtils commandUtils, IFileUtils fileUtils, YouTubeGrabber grabber)
+        {
+            _logger = logger;
             _audioService = audioService;
             _optionsService = optionsService;            
             _commandUtils = commandUtils;
@@ -58,13 +61,15 @@ namespace keeganstudios.possebot.CommandModules
                     return;
                 }
 
+                var emoji = new Emoji("🎺");
+                await Context.Message.AddReactionAsync(emoji);
+
                 await _audioService.ConnectToVoiceAndPlayTheme((Context.User as IVoiceState).VoiceChannel, theme);
             }
             catch(Exception ex)
             {
                 await ReplyAsync($"Hey { Context.User.Mention}, I ran into a problem and couldn't announce you 😢.");
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
+                _logger.LogError(ex, "Unable to announce theme for user: userId} in guild: guildId}", Context.User.Id, Context.Guild.Id);
             }
         }
 
@@ -93,8 +98,7 @@ namespace keeganstudios.possebot.CommandModules
             catch(Exception ex)
             {
                 await ReplyAsync($"Hey { Context.User.Mention}, I ran into a problem and couldn't enable/disable your theme 😢.");
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
+                _logger.LogError(ex, "Unable to enabe/disable theme for user: {userId} in guild: {guildId}", Context.User.Id, Context.Guild.Id);
             }
         }
 
@@ -131,8 +135,7 @@ namespace keeganstudios.possebot.CommandModules
             catch(Exception ex)
             {
                 await ReplyAsync($"Hey { Context.User.Mention}, I ran into a problem and couldn't set your theme 😢.");
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
+                _logger.LogError(ex, $"Unable to attach theme for user: {Context.User.Id} in guild: {Context.Guild.Id}");
             }
         }
 
@@ -171,8 +174,7 @@ namespace keeganstudios.possebot.CommandModules
             catch (Exception ex)
             {
                 await ReplyAsync($"Hey { Context.User.Mention}, I ran into a problem and couldn't set your theme 😢.");
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
+                _logger.LogError(ex, "Unable to grab theme for user: {userId} in guild: {guildId}", Context.User.Id, Context.Guild.Id);
             }
         }
 
@@ -210,8 +212,7 @@ namespace keeganstudios.possebot.CommandModules
             catch(Exception ex)
             {
                 await ReplyAsync($"Hey { Context.User.Mention}, I ran into a problem and couldn't get your theme info 😢.");
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
+                _logger.LogError(ex, "Unable to get theme info for user: {userId} in guild: {guildId}", Context.User.Id, Context.Guild.Id);
             }
         }
     }

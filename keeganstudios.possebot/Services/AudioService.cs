@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Audio;
 using keeganstudios.possebot.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,12 +12,13 @@ using System.Threading.Tasks;
 namespace keeganstudios.possebot.Services
 {
     public class AudioService : IAudioService
-    {        
+    {
+        private readonly ILogger<AudioService> _logger;
         private Dictionary<ulong, AudioClientInfo> _audioClients = new Dictionary<ulong, AudioClientInfo>();        
 
-        public AudioService()
+        public AudioService(ILogger<AudioService> logger)
         {
-     
+            _logger = logger;
         }
 
         public Task ConnectToVoiceAndPlayTheme(IVoiceChannel voiceChannel, ThemeDetails theme)
@@ -45,19 +47,18 @@ namespace keeganstudios.possebot.Services
 
                         if (audioClientInfo == null || !audioClientInfo.IsPlaying)
                         {                            
-                            Console.WriteLine($"Connecting to channel {voiceChannel.Id} in Guild Id: {voiceChannel.Guild.Id}");
+                            _logger.LogInformation("Connecting to voice channel {voiceChannelId} in Guild Id: {guildId}", voiceChannel.Id, voiceChannel.Guild.Id);
 
                             var audioClient = await voiceChannel.ConnectAsync();
 
                             if (!_audioClients.ContainsKey(voiceChannel.Guild.Id))
                             {
                                 audioClientInfo = new AudioClientInfo { AudioClient = audioClient, IsPlaying = true };
-                                Console.WriteLine($"Adding audio client {voiceChannel.Guild.Id}");
+                                _logger.LogInformation("Adding audio client {guildId}", voiceChannel.Guild.Id);
                                 _audioClients.Add(voiceChannel.Guild.Id, audioClientInfo);                                
-                                Console.WriteLine($"Added audio client {voiceChannel.Guild.Id}");
                             }
 
-                            Console.WriteLine($"Connected to channel {voiceChannel.Id}");
+                            _logger.LogInformation("Connected to voice channel {voiceChannelId}", voiceChannel.Id);
 
                             await Task.Delay(1000);
                             await PlayAudioFile(audioClient, theme);                            
@@ -69,8 +70,7 @@ namespace keeganstudios.possebot.Services
                     catch (Exception ex)
                     {
                         retryCount++;
-                        Console.WriteLine($"Exception: {ex.Message}");
-                        Console.Error.WriteLine($"- {ex.StackTrace}");                        
+                        _logger.LogError(ex, "Unable to connect to voice and play theme: {@theme} on voice channel id (retry: {retryCount}): {voiceChannelId}", theme, retryCount, voiceChannel.Id);
                     }
                 }
             });
@@ -79,8 +79,8 @@ namespace keeganstudios.possebot.Services
 
         public ProcessStartInfo CreatePsi(ThemeDetails theme)
         {
-            var args = BuildFfmegArguments(theme.AudioPath, theme.Start, theme.Duration);
-            Console.WriteLine(args);
+            _logger.LogInformation("Building process start info for theme: {@theme}", theme);
+            var args = BuildFfmpegArguments(theme.AudioPath, theme.Start, theme.Duration);            
             return new ProcessStartInfo
             {
                 FileName = "ffmpeg",
@@ -92,21 +92,28 @@ namespace keeganstudios.possebot.Services
 
         public async Task PlayAudioFile(IAudioClient audioClient, ThemeDetails theme)
         {
-            if (File.Exists(theme.AudioPath))
+            try
             {
-                Console.WriteLine($"Sending {theme.AudioPath}");
+                if (File.Exists(theme.AudioPath))
+                {
+                    _logger.LogInformation("Audio file at path: {audioPath} exists. Starting processing.", theme.AudioPath);
 
-                await SendAudioAsync(audioClient, theme);
-
-                Console.WriteLine($"Sent {theme.AudioPath}");
+                    await SendAudioAsync(audioClient, theme);                    
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unable to play audio file for theme: {@theme}", theme);
             }
         }
 
-        public string BuildFfmegArguments(string path, int start, int duration)
+        public string BuildFfmpegArguments(string path, int start, int duration)
         {
             var args = new StringBuilder();
             try
             {
+                _logger.LogInformation("Building ffmpeg arguments for path: {audioPath} start: {start} duration: {duration}", path, start, duration);
+
                 args.Append($"-hide_banner -loglevel panic -i \"{path}\"");
 
                 if (start > 0)
@@ -123,8 +130,7 @@ namespace keeganstudios.possebot.Services
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
+                _logger.LogError(ex, "Unable to build ffmpeg argumnets for path: {audioPath} start: {start} duration: {duration}", path, start, duration);
             }
             return args.ToString();
         }
@@ -135,13 +141,14 @@ namespace keeganstudios.possebot.Services
             {
                 await client.SetSpeakingAsync(true);
                 var psi = CreatePsi(theme);
-                // Create FFmpeg using the previous example
+                
                 using (var ffmpeg = Process.Start(psi))
                 using (var output = ffmpeg.StandardOutput.BaseStream)
                 using (var discord = client.CreatePCMStream(AudioApplication.Music))
                 {
                     try
                     {
+                        _logger.LogInformation("Sending {audioPath} for user id: {userId} in guild id: {guildId}", theme.AudioPath, theme.UserId, theme.GuildId);
                         await output.CopyToAsync(discord);
                     }
                     finally
@@ -154,8 +161,7 @@ namespace keeganstudios.possebot.Services
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
+                _logger.LogError(ex, "Unable to send audio for theme: {@theme}", theme);
             }
         }
 
@@ -170,14 +176,12 @@ namespace keeganstudios.possebot.Services
                         return;
                     }
 
-                    Console.WriteLine($"Disconnecting from channel {voiceChannel.Id}");
-                    await voiceChannel.DisconnectAsync();
-                    Console.WriteLine($"Disconnected from channel {voiceChannel.Id}");
+                   _logger.LogInformation("Disconnecting from channel {voiceChannelId}", voiceChannel.Id);
+                    await voiceChannel.DisconnectAsync();                    
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine(ex.Message);
-                    Console.Error.WriteLine($"- {ex.StackTrace}");
+                    _logger.LogError(ex, "Unable to disconnect from voice channel id: {voiceChannelId}", voiceChannel.Id);
                 }
             });
             return Task.CompletedTask;

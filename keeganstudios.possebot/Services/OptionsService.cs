@@ -1,4 +1,5 @@
 ﻿using keeganstudios.possebot.Models;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -11,8 +12,14 @@ namespace keeganstudios.possebot.Services
 {
     public class OptionsService : IOptionsService
     {
+        private ILogger<OptionsService> _logger;
         private ConfigurationOptions _configurationOptions;
         private ThemeOptions _themeOptions;
+
+        public OptionsService(ILogger<OptionsService> logger)
+        {
+            _logger = logger;
+        }
 
         public async Task<ConfigurationOptions> ReadConfigurationOptionsAsync()
         {
@@ -20,17 +27,14 @@ namespace keeganstudios.possebot.Services
             {
                 try
                 {
-                    Console.WriteLine($"Reading ConfigurationOptions");
+                    _logger.LogInformation("Reading configuration options");                   
 
                     var json = JObject.Parse(await File.ReadAllTextAsync("settings.json"));
-                    _configurationOptions = JsonConvert.DeserializeObject<ConfigurationOptions>(json.GetValue("configuration").ToString());
-
-                    Console.WriteLine($"Read ConfigurationOptions");
+                    _configurationOptions = JsonConvert.DeserializeObject<ConfigurationOptions>(json.GetValue("configuration").ToString());                    
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine(ex.Message);
-                    Console.Error.WriteLine($"- {ex.StackTrace}");
+                    _logger.LogError(ex, "Unable to read configuration options");
                 }
             }
             return _configurationOptions;
@@ -42,17 +46,14 @@ namespace keeganstudios.possebot.Services
             {
                 try
                 {
-                    Console.WriteLine($"Reading ThemeOptions");
+                    _logger.LogInformation("Reading theme options");
 
                     var json = JObject.Parse(await File.ReadAllTextAsync("themes.json"));
                     _themeOptions = JsonConvert.DeserializeObject<ThemeOptions>(json.ToString());
-
-                    Console.WriteLine($"Read ThemeOptions");
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine(ex.Message);
-                    Console.Error.WriteLine($"- {ex.StackTrace}");
+                    _logger.LogError(ex, "Unable to read theme options");
                 }
             }
             return _themeOptions;
@@ -63,18 +64,14 @@ namespace keeganstudios.possebot.Services
             ThemeDetails theme = null;
             try
             {
-                Console.WriteLine($"Reading ThemeDetails for Guild Id: {guildId} User Id: {userId}");
+                _logger.LogInformation("Reading theme details for Guild Id: {guildId} User Id: {userId}", guildId, userId);
 
-                var themeOptions = await ReadThemeOptionsAsync();
-                
-                theme = themeOptions.Themes.Where(x => x.GuildId == guildId && x.UserId == userId).FirstOrDefault();                
-
-                Console.WriteLine($"Read ThemeDetails for Guild Id: {guildId} User Id: {userId}");
+                var themeOptions = await ReadThemeOptionsAsync();                
+                theme = themeOptions.Themes.Where(x => x.GuildId == guildId && x.UserId == userId).FirstOrDefault();
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
+                _logger.LogError(ex, "Unable to read ThemDetails for User Id: {userId} Guild Id {guildId}", userId, guildId);                
             }
 
             return theme;
@@ -84,17 +81,14 @@ namespace keeganstudios.possebot.Services
         {
             try
             {
-                Console.WriteLine($"Reloading themes");
+                _logger.LogInformation("Reloading themes");
 
                 var json = JObject.Parse(await File.ReadAllTextAsync("themes.json"));
                 _themeOptions = JsonConvert.DeserializeObject<ThemeOptions>(json.ToString());
-
-                Console.WriteLine($"Reloaded themes");
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
+                _logger.LogError(ex, "Unable to reload themes");                
             }
         }
 
@@ -123,8 +117,7 @@ namespace keeganstudios.possebot.Services
             }
             catch(Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
+                _logger.LogError(ex, "Unable to write theme {@theme}", theme);                
             }
         }
 
@@ -150,8 +143,7 @@ namespace keeganstudios.possebot.Services
             }
             catch(Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
+                _logger.LogError(ex, "Unable to update theme collection with theme {@theme}", theme);
             }
 
             return themeCollection;
@@ -161,17 +153,14 @@ namespace keeganstudios.possebot.Services
         {
             try
             {
-                Console.WriteLine($"Writing themes");
+                _logger.LogInformation("Writing themes");
 
                 var json = JsonConvert.SerializeObject(themeOptions, Formatting.Indented);
                 await File.WriteAllTextAsync("themes.json", json);
-
-                Console.WriteLine($"Wrote themes");
             }
             catch(Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
+                _logger.LogError(ex, "Unable to write themes to themes.json");                
             }
         }
 

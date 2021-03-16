@@ -14,7 +14,7 @@ namespace keeganstudios.possebot.Services
         Task ConnectToVoiceAndPlayTheme(IVoiceChannel voiceChannel, ThemeDetails theme);
         ProcessStartInfo CreatePsi(ThemeDetails theme);
         Task PlayAudioFile(IAudioClient audioClient, ThemeDetails theme);
-        string BuildFfmegArguments(string path, int start, int duration);
+        string BuildFfmpegArguments(string path, int start, int duration);
         Task SendAudioAsync(IAudioClient client, ThemeDetails theme);
         Task DisconnectFromVoice(IVoiceChannel voiceChannel);
     }
