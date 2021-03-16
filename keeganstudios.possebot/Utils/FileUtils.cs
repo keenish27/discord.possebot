@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.IO;
 using System.Net.Http;
 using System.Text.RegularExpressions;
@@ -8,20 +9,29 @@ namespace keeganstudios.possebot.Utils
 {
     public class FileUtils : IFileUtils
     {
+        private readonly ILogger<FileUtils> _logger;
         private readonly HttpClient _httpClient;
-        public FileUtils(HttpClient httpClient)
+        public FileUtils(ILogger<FileUtils> logger, HttpClient httpClient)
         {
+            _logger = logger;
             _httpClient = httpClient;
         }
         public string BuildAudioFilePath(ulong guildId)
         {
-            var path = Path.Combine(Directory.GetCurrentDirectory(), "files", guildId.ToString());
-
-            if(!Directory.Exists(path))
+            var path = string.Empty;
+            try
             {
-                Directory.CreateDirectory(path);
-            }
+                path = Path.Combine(Directory.GetCurrentDirectory(), "files", guildId.ToString());
 
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Unable to build audio file path for Guild Id: {guildId}", guildId);
+            }
             return path;
         }
 
@@ -35,8 +45,7 @@ namespace keeganstudios.possebot.Utils
             }
             catch(Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
+                _logger.LogError(ex, "Unable to clean file name {fileName}", fileName);
                 throw;
             }
 
@@ -47,7 +56,7 @@ namespace keeganstudios.possebot.Utils
         {
             try
             {
-                Console.WriteLine($"Saving stream from: {streamUrl} to file: {filePath}");
+                _logger.LogInformation("Saving stream from: {streamUrl} to file: {audioPath}", streamUrl, filePath);
 
                 if (File.Exists(filePath))
                 {
@@ -59,12 +68,11 @@ namespace keeganstudios.possebot.Utils
                 {
                     await file.CopyToAsync(fileStream);
                 }
-                Console.WriteLine($"Saved stream from: {streamUrl} to file: {filePath}");
+                _logger.LogInformation("Saved stream from: {streamUrl} to file: {audioPath}", streamUrl, filePath);
             }
             catch(Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
+                _logger.LogError(ex, "Unable to save audio file from: {streamUrl} to file: {audioPath}", streamUrl, filePath);
                 throw;
             }
         }

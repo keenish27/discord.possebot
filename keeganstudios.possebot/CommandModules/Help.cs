@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using keeganstudios.possebot.Services;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,11 +11,13 @@ namespace keeganstudios.possebot.CommandModules
 {
     public class Help : ModuleBase<SocketCommandContext>
     {
+        private readonly ILogger<Help> _logger;
         private readonly CommandService _commands;
         private readonly IOptionsService _optionsService;
 
-        public Help(CommandService commands, IOptionsService optionsSerice)
+        public Help(ILogger<Help> logger, CommandService commands, IOptionsService optionsSerice)
         {
+            _logger = logger;
             _commands = commands;
             _optionsService = optionsSerice;
         }
@@ -49,7 +52,7 @@ namespace keeganstudios.possebot.CommandModules
                     {
                         // Just a basic report stuff to log missed summaries
                         if (string.IsNullOrWhiteSpace(cmd.Summary))
-                            Console.WriteLine("No summary for " + cmd.Name);
+                            _logger.LogInformation("No summary for {commandName}", cmd.Name);
 
                         // TODO: Boy I need a better way to stop the precondition check for these modules
                         if (!module.Name.ToLower().Equals("help") && !module.Name.ToLower().Equals("ping"))
@@ -77,8 +80,7 @@ namespace keeganstudios.possebot.CommandModules
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine($"- {ex.StackTrace}");
+                _logger.LogError(ex, "Unable to help user id: {userId} in guild id: {guildId}", Context.User.Id, Context.Guild.Id);
             }
         }
 
@@ -87,55 +89,62 @@ namespace keeganstudios.possebot.CommandModules
         /// <returns> The <see cref="Task" /> </returns>
         private async Task DetailedHelpAsync([Remainder] string command)
         {
-            var configOptions = await _optionsService.ReadConfigurationOptionsAsync();
-            var moduleFound = _commands.Modules.Select(mod => mod.Name.ToLower()).ToList().Contains(command);
-            if (moduleFound)
+            try
             {
-                await DetailedModuleHelpAsync(command);
-                return;
+                var configOptions = await _optionsService.ReadConfigurationOptionsAsync();
+                var moduleFound = _commands.Modules.Select(mod => mod.Name.ToLower()).ToList().Contains(command);
+                if (moduleFound)
+                {
+                    await DetailedModuleHelpAsync(command);
+                    return;
+                }
+
+                // `command` isn't a module for sure. Now checking if it is a command
+                var result = _commands.Search(Context, command);
+                if (!result.IsSuccess)
+                {
+                    await ReplyAsync(
+                        $"Sorry, I couldn't find a command called *{command}* <:darthvadar:461157568174358552>");
+                    return;
+                }
+
+                var builder = new EmbedBuilder
+                {
+                    Color = new Color(87, 222, 127)
+                };
+
+                foreach (var cmd in result.Commands.Select(match => match.Command))
+                    builder.AddField(
+                        x =>
+                        {
+                            x.Name = $"Help on *{command}* coming right up";
+                            var temp = "None";
+                            if (cmd.Aliases.Count != 1) temp = string.Join(", ", cmd.Aliases);
+
+                            x.Value = "**Aliases**: " + temp;
+                            temp = "`" + configOptions.BotPrefix + command;
+                            if (cmd.Parameters.Count != 0)
+                                temp += " " + string.Join(
+                                            " ",
+                                            cmd.Parameters.Select(
+                                                p => p.IsOptional
+                                                    ? "<" + (p.Summary.Length > 1 ? p.Summary : p.Name) + ">"
+                                                    : "[" + (p.Summary.Length > 1 ? p.Summary : p.Name) + "]"));
+
+                            temp += "`";
+                            x.Value += $"\n**Usage**: {temp}\n**Summary**: {cmd.Summary}";
+
+                            x.IsInline = false;
+                        });
+
+                builder.WithFooter("Note: Parameters under `[]` are mandatory and the ones under `<>` are optional");
+
+                await ReplyAsync(string.Empty, false, builder.Build());
             }
-
-            // `command` isn't a module for sure. Now checking if it is a command
-            var result = _commands.Search(Context, command);
-            if (!result.IsSuccess)
+            catch(Exception ex)
             {
-                await ReplyAsync(
-                    $"Sorry, I couldn't find a command called *{command}* <:darthvadar:461157568174358552>");
-                return;
+                _logger.LogError(ex, "Unable to get detailed help for user id: {userId} in guild id: {guild.d}", Context.User.Id, Context.Guild.Id);
             }
-
-            var builder = new EmbedBuilder
-            {
-                Color = new Color(87, 222, 127)
-            };
-
-            foreach (var cmd in result.Commands.Select(match => match.Command))
-                builder.AddField(
-                    x =>
-                    {
-                        x.Name = $"Help on *{command}* coming right up";
-                        var temp = "None";
-                        if (cmd.Aliases.Count != 1) temp = string.Join(", ", cmd.Aliases);
-
-                        x.Value = "**Aliases**: " + temp;
-                        temp = "`" + configOptions.BotPrefix + command;
-                        if (cmd.Parameters.Count != 0)
-                            temp += " " + string.Join(
-                                        " ",
-                                        cmd.Parameters.Select(
-                                            p => p.IsOptional
-                                                ? "<" + (p.Summary.Length > 1 ? p.Summary : p.Name) + ">"
-                                                : "[" + (p.Summary.Length > 1 ? p.Summary : p.Name) + "]"));
-
-                        temp += "`";
-                        x.Value += $"\n**Usage**: {temp}\n**Summary**: {cmd.Summary}";
-
-                        x.IsInline = false;
-                    });
-
-            builder.WithFooter("Note: Parameters under `[]` are mandatory and the ones under `<>` are optional");
-
-            await ReplyAsync(string.Empty, false, builder.Build());
         }
 
         /// <summary> The detailed module help async </summary>
@@ -143,18 +152,25 @@ namespace keeganstudios.possebot.CommandModules
         /// <returns> The <see cref="Task" /> </returns>
         private async Task DetailedModuleHelpAsync(string module)
         {
-            var first = _commands.Modules.First(mod => mod.Name.ToLower() == module);
-            var embed = new EmbedBuilder
+            try
             {
-                Title = "List of commands under " + module.ToUpper() + " module",
-                Description = string.Empty,
-                Color = new Color(87, 222, 127)
-            };
-            embed.WithFooter("Use `help [command-name]` for more information on the command");
-            foreach (var cmds in first.Commands) embed.Description += $"{cmds.Name}, ";
+                var first = _commands.Modules.First(mod => mod.Name.ToLower() == module);
+                var embed = new EmbedBuilder
+                {
+                    Title = "List of commands under " + module.ToUpper() + " module",
+                    Description = string.Empty,
+                    Color = new Color(87, 222, 127)
+                };
+                embed.WithFooter("Use `help [command-name]` for more information on the command");
+                foreach (var cmds in first.Commands) embed.Description += $"{cmds.Name}, ";
 
-            embed.Description = embed.Description.Substring(0, embed.Description.Length - 2);
-            await ReplyAsync(string.Empty, false, embed.Build());
+                embed.Description = embed.Description.Substring(0, embed.Description.Length - 2);
+                await ReplyAsync(string.Empty, false, embed.Build());
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Unable to get detailed module help for user id: {userId} in guild id: {guildId}", Context.User.Id, Context.Guild.Id);
+            }
         }
     }
 }
