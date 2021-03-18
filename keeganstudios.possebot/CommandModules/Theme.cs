@@ -18,17 +18,19 @@ namespace keeganstudios.possebot.CommandModules
         private readonly IOptionsService _optionsService;        
         private readonly ICommandUtils _commandUtils;
         private readonly IFileUtils _fileUtils;
+        private readonly IEmbedBuilderUtils _embedBuilderUtils;
         private readonly YouTubeGrabber _grabber;
 
         private string[] _acceptedAudioFileExtensions = { ".mp3", ".m4a" };
 
-        public Theme(ILogger<Theme> logger, IAudioService audioService, IOptionsService optionsService, ICommandUtils commandUtils, IFileUtils fileUtils, YouTubeGrabber grabber)
+        public Theme(ILogger<Theme> logger, IAudioService audioService, IOptionsService optionsService, ICommandUtils commandUtils, IFileUtils fileUtils,IEmbedBuilderUtils embedBuilderUtils,  YouTubeGrabber grabber)
         {
             _logger = logger;
             _audioService = audioService;
             _optionsService = optionsService;            
             _commandUtils = commandUtils;
             _fileUtils = fileUtils;
+            _embedBuilderUtils = embedBuilderUtils;
             _grabber = grabber;
         }               
 
@@ -197,13 +199,13 @@ namespace keeganstudios.possebot.CommandModules
                 {
                     builder.WithColor(new Color(87, 222, 127));
                     builder.WithTitle($"Hey {Context.User.Username}, here is info about your current theme.");
-                    builder.AddField(x => {
-                        x.Name = "Theme Info";
-                        x.Value = $"**File Name**: {Path.GetFileName(theme.AudioPath)}";
-                        x.Value += $"\n**Start**: {theme.Start} second(s)";
-                        x.Value += $"\n**Duration**: {theme.Duration} second(s)";
-                        x.Value += $"\n**Enabled**: {theme.Enabled}";
-                        });
+                    
+                    var fieldValue = $"**File Name**: {Path.GetFileName(theme.AudioPath)}";
+                    fieldValue += $"\n**Start**: {theme.Start} second(s)";
+                    fieldValue += $"\n**Duration**: {theme.Duration} second(s)";
+                    fieldValue += $"\n**Enabled**: {theme.Enabled}";
+                    
+                    builder.AddField(_embedBuilderUtils.BuildEmbedField("Theme Info", fieldValue, false));
                     builder.WithFooter($"To hear your current theme use {await _commandUtils.BuildCommandAsyc("announce-me")}.");
                 }
 
