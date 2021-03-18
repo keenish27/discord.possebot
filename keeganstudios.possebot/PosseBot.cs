@@ -54,6 +54,7 @@ namespace keeganstudios.possebot
             services.AddSingleton<IAudioService, AudioService>();
             services.AddSingleton<ICommandUtils, CommandUtils>();
             services.AddSingleton<IFileUtils, FileUtils>();
+            services.AddSingleton<IEmbedBuilderUtils, EmbedBuilderUtils>();
             services.AddSingleton<YouTubeGrabber>();
             services.AddLogging(logging => logging.AddSerilog());
 

@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using keeganstudios.possebot.Services;
+using keeganstudios.possebot.Utils;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -14,12 +15,14 @@ namespace keeganstudios.possebot.CommandModules
         private readonly ILogger<Help> _logger;
         private readonly CommandService _commands;
         private readonly IOptionsService _optionsService;
+        private readonly IEmbedBuilderUtils _embedBuilderUtils;
 
-        public Help(ILogger<Help> logger, CommandService commands, IOptionsService optionsSerice)
+        public Help(ILogger<Help> logger, CommandService commands, IOptionsService optionsSerice, IEmbedBuilderUtils embedBuilderUtils)
         {
             _logger = logger;
             _commands = commands;
             _optionsService = optionsSerice;
+            _embedBuilderUtils = embedBuilderUtils;
         }
 
         [Command("help", RunMode = RunMode.Async)]
@@ -41,39 +44,16 @@ namespace keeganstudios.possebot.CommandModules
                     builder.WithFooter(
                         f => f.WithText("Use `help [command-name]` or `help [module-name]` for more information"));
                 }
-
-                // Looping thorough every module
+                
                 foreach (var module in _commands.Modules.OrderBy(x => x.Name))
                 {
-                    string fieldValue = null;
-
-                    // Looping through every command in the selected module
-                    foreach (var cmd in module.Commands.OrderBy(x => x.Name))
-                    {
-                        // Just a basic report stuff to log missed summaries
-                        if (string.IsNullOrWhiteSpace(cmd.Summary))
-                            _logger.LogInformation("No summary for {commandName}", cmd.Name);
-
-                        // TODO: Boy I need a better way to stop the precondition check for these modules
-                        if (!module.Name.ToLower().Equals("help") && !module.Name.ToLower().Equals("ping"))
-                        {
-                            var result = await cmd.CheckPreconditionsAsync(Context);
-                            if (result.IsSuccess) fieldValue += $"`{cmd.Aliases.First()}`, ";
-                        }
-                    }
+                    string fieldValue = await FilterPreconditions(module);                    
 
                     if (string.IsNullOrWhiteSpace(fieldValue))
                         continue;
-                    // FieldValue could be empty when the precondition is false.
-                    // But ofc its not so we are here. Creating a field in the embed.
+                    
                     fieldValue = fieldValue.Substring(0, fieldValue.Length - 2);
-                    builder.AddField(
-                        x =>
-                        {
-                            x.Name = $"\n📚 {module.Name}";
-                            x.Value = $"{fieldValue}";
-                            x.IsInline = false;
-                        });
+                    builder.AddField(_embedBuilderUtils.BuildEmbedField($"\n📚 {module.Name}", fieldValue, false));                        
                 }
 
                 await ReplyAsync(string.Empty, false, builder.Build());
@@ -84,14 +64,37 @@ namespace keeganstudios.possebot.CommandModules
             }
         }
 
-        /// <summary> Gets more help on a command  </summary>
-        /// <param name="command"> The command </param>
-        /// <returns> The <see cref="Task" /> </returns>
-        private async Task DetailedHelpAsync([Remainder] string command)
+        public async Task<string> FilterPreconditions(ModuleInfo module)
+        {
+            string fieldValue = null;
+
+            try
+            {                
+                foreach (var cmd in module.Commands.OrderBy(x => x.Name))
+                {                    
+                    if (string.IsNullOrWhiteSpace(cmd.Summary))
+                        _logger.LogInformation("No summary for {commandName}", cmd.Name);
+                    
+                    if (!module.Name.ToLower().Equals("help") && !module.Name.ToLower().Equals("ping"))
+                    {
+                        var result = await cmd.CheckPreconditionsAsync(Context);
+                        if (result.IsSuccess) fieldValue += $"`{cmd.Aliases.First()}`, ";
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Unable to filter preconditions for module: {moduleName}", module.Name);
+                throw;
+            }
+
+            return fieldValue;
+        }
+       
+        public async Task DetailedHelpAsync([Remainder] string command)
         {
             try
-            {
-                var configOptions = await _optionsService.ReadConfigurationOptionsAsync();
+            {                
                 var moduleFound = _commands.Modules.Select(mod => mod.Name.ToLower()).ToList().Contains(command);
                 if (moduleFound)
                 {
@@ -103,8 +106,7 @@ namespace keeganstudios.possebot.CommandModules
                 var result = _commands.Search(Context, command);
                 if (!result.IsSuccess)
                 {
-                    await ReplyAsync(
-                        $"Sorry, I couldn't find a command called *{command}* <:darthvadar:461157568174358552>");
+                    await ReplyAsync($"Sorry, I couldn't find a command called *{command}* ☹️");
                     return;
                 }
 
@@ -114,29 +116,12 @@ namespace keeganstudios.possebot.CommandModules
                 };
 
                 foreach (var cmd in result.Commands.Select(match => match.Command))
-                    builder.AddField(
-                        x =>
-                        {
-                            x.Name = $"Help on *{command}* coming right up";
-                            var temp = "None";
-                            if (cmd.Aliases.Count != 1) temp = string.Join(", ", cmd.Aliases);
+                {
+                    var fieldValue = BuildAliasInformation(cmd.Aliases);
+                    fieldValue += await BuildParameterInformation(cmd, command);
 
-                            x.Value = "**Aliases**: " + temp;
-                            temp = "`" + configOptions.BotPrefix + command;
-                            if (cmd.Parameters.Count != 0)
-                                temp += " " + string.Join(
-                                            " ",
-                                            cmd.Parameters.Select(
-                                                p => p.IsOptional
-                                                    ? "<" + (p.Summary.Length > 1 ? p.Summary : p.Name) + ">"
-                                                    : "[" + (p.Summary.Length > 1 ? p.Summary : p.Name) + "]"));
-
-                            temp += "`";
-                            x.Value += $"\n**Usage**: {temp}\n**Summary**: {cmd.Summary}";
-
-                            x.IsInline = false;
-                        });
-
+                    builder.AddField(_embedBuilderUtils.BuildEmbedField($"Help on *{command}* coming right up", fieldValue, false));                    
+                }
                 builder.WithFooter("Note: Parameters under `[]` are mandatory and the ones under `<>` are optional");
 
                 await ReplyAsync(string.Empty, false, builder.Build());
@@ -147,10 +132,34 @@ namespace keeganstudios.possebot.CommandModules
             }
         }
 
-        /// <summary> The detailed module help async </summary>
-        /// <param name="module"> The command </param>
-        /// <returns> The <see cref="Task" /> </returns>
-        private async Task DetailedModuleHelpAsync(string module)
+        public string BuildAliasInformation(IReadOnlyList<string> aliases)
+        {
+            var temp = "None";
+            if (aliases.Count != 1)
+            {
+                temp = string.Join(", ", aliases);
+            }
+            return "**Aliases**: " + temp;
+        }
+
+        public async Task<string> BuildParameterInformation(CommandInfo commandInfo, string command)
+        {
+            var configOptions = await _optionsService.ReadConfigurationOptionsAsync();
+
+            var temp = "`" + configOptions.BotPrefix + command;
+            
+            if (commandInfo.Parameters.Count != 0)
+            {
+                var parameterInfoCollection = commandInfo.Parameters.Select(p => p.IsOptional ? "<" + (p.Summary.Length > 1 ? p.Summary : p.Name) + ">" : "[" + (p.Summary.Length > 1 ? p.Summary : p.Name) + "]");
+                temp += " " + string.Join(" ", parameterInfoCollection);
+            }
+
+            temp += "`";
+
+            return $"\n**Usage**: {temp}\n**Summary**: {commandInfo.Summary}";
+        }
+       
+        public async Task DetailedModuleHelpAsync(string module)
         {
             try
             {
@@ -162,7 +171,11 @@ namespace keeganstudios.possebot.CommandModules
                     Color = new Color(87, 222, 127)
                 };
                 embed.WithFooter("Use `help [command-name]` for more information on the command");
-                foreach (var cmds in first.Commands) embed.Description += $"{cmds.Name}, ";
+                
+                foreach (var cmds in first.Commands)
+                {
+                    embed.Description += $"{cmds.Name}, ";
+                }
 
                 embed.Description = embed.Description.Substring(0, embed.Description.Length - 2);
                 await ReplyAsync(string.Empty, false, embed.Build());
