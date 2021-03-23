@@ -77,7 +77,7 @@ namespace keeganstudios.possebot.CommandModules
 
         [Command("theme-enable", RunMode = RunMode.Async)]
         [Alias("te")]
-        [Summary("Enables or Disables the user's theme.")]
+        [Summary("Enables or Disables your theme.")]
         public async Task ThemeEnableAsync([Summary("true or false")] bool enabled)
         {
             try
@@ -218,6 +218,56 @@ namespace keeganstudios.possebot.CommandModules
             }
         }
 
+        [Command("announce", RunMode = RunMode.Async)]
+        [Alias("a")]
+        [Summary("Plays a user's theme")]
+        [RequireUserPermission(GuildPermission.Administrator)]
+        public async Task ThemeAnnounceUserAsync([Summary("Username")] string userName)
+        {
+            try
+            {
+                var user = Context.Guild.Users.Where(x => x.Username.Equals(userName, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+                if (user == null)
+                {
+                    await ReplyAsync($"Hey, {Context.User.Mention}, I can't find user {userName} so I am unable to announce that user.");
+                    return;
+                }
+
+                var configurationOptions = await _optionsService.ReadConfigurationOptionsAsync();
+                var voiceChannel = (Context.User as IVoiceState).VoiceChannel;
+
+                if (voiceChannel == null)
+                {
+                    await ReplyAsync($"Hey {Context.User.Mention}, you must be in a voice channel!");
+                    return;
+                }
+
+                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.Guild.Id, user.Id);
+
+                if (theme == null)
+                {
+                    await ReplyAsync($"Hey {Context.User.Mention}, {user.Username} doesn't have a theme. Use {await _commandUtils.BuildCommandAsync("theme-attach", true)} to learn how to set a theme.");
+                    return;
+                }
+
+                if (!theme.Enabled)
+                {
+                    await ReplyAsync($"Hey {Context.User.Mention}, {user.Username} theme isn't enabled. Use {await _commandUtils.BuildCommandAsync("theme-enable", true)} to learn how to enable your theme.");
+                    return;
+                }
+
+                var emoji = new Emoji("🎺");
+                await Context.Message.AddReactionAsync(emoji);
+
+                await _audioService.ConnectToVoiceAndPlayTheme((Context.User as IVoiceState).VoiceChannel, theme);
+            }
+            catch (Exception ex)
+            {
+                await ReplyAsync($"Hey { Context.User.Mention}, I ran into a problem and couldn't announce {userName} 😢.");
+                _logger.LogError(ex, "Unable to announce theme for user: userName} in guild: guildId}", userName, Context.Guild.Id);
+            }
+        }
+
         [Command("theme-grab-user", RunMode = RunMode.Async)]
         [Alias("tgu")]
         [Summary("Sets a theme for the given user")]
@@ -230,6 +280,7 @@ namespace keeganstudios.possebot.CommandModules
                 if(user == null)
                 {
                     await ReplyAsync($"Hey, {Context.User.Mention}, I can't find user {userName} so I am unable to set that user's theme.");
+                    return;
                 }
 
                 var result = await _grabber.GrabAsync(new Uri(url));
