@@ -217,5 +217,51 @@ namespace keeganstudios.possebot.CommandModules
                 _logger.LogError(ex, "Unable to get theme info for user: {userId} in guild: {guildId}", Context.User.Id, Context.Guild.Id);
             }
         }
+
+        [Command("theme-grab-user", RunMode = RunMode.Async)]
+        [Alias("tgu")]
+        [Summary("Sets a theme for the given user")]
+        [RequireUserPermission(GuildPermission.Administrator)]
+        public async Task ThemeGrabForUserAsync([Summary("Username")] string userName, [Summary("Youtube Url")] string url, [Summary("Position to start in seconds")] int start, [Summary("Length of time to play in seconds")] int duration)
+        {
+            try
+            {
+                var user = Context.Guild.Users.Where(x => x.Username.Equals(userName, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+                if(user == null)
+                {
+                    await ReplyAsync($"Hey, {Context.User.Mention}, I can't find user {userName} so I am unable to set that user's theme.");
+                }
+
+                var result = await _grabber.GrabAsync(new Uri(url));
+
+                await ReplyAsync($"Hey {Context.User.Mention}, I'm going to grab {result.Title} and set that as {user.Username}'s theme. This can take a few minutes so hang tight. I'll let you know when I'm done.");
+
+                var resourceToSave = _commandUtils.GetGrabbedMediaToSave(result.Resources);
+
+                if (resourceToSave == null)
+                {
+                    await ReplyAsync($"Hey {Context.User.Mention}, I didn't find any usable audio streams for {result.Title}. Please try a different url.");
+                    return;
+                }
+
+                var fileName = _fileUtils.CleanFileName(result.Title);
+                var filePath = Path.Combine(_fileUtils.BuildAudioFilePath(Context.Guild.Id), $"{fileName}.{resourceToSave.Format.Extension}");
+
+                if (!File.Exists(filePath))
+                {
+                    await _fileUtils.SaveAudioFile(filePath, resourceToSave.ResourceUri.ToString());
+                }
+
+                var theme = _optionsService.CreateTheme(user.Id, Context.Guild.Id, filePath, start, duration, true);
+
+                await _optionsService.WriteThemeAsync(theme);
+                await ReplyAsync($"Hey {Context.User.Mention}, you're theme has been updated to {result.Title}! Use the {await _commandUtils.BuildCommandAsyc("announce-me")} to hear it.");
+            }
+            catch(Exception ex)
+            {
+                await ReplyAsync($"Hey { Context.User.Mention}, I ran into a problem and couldn't set the theme for {userName} 😢.");
+                _logger.LogError(ex, "Unable to set theme for user: {userId} in guild: {guildId}", Context.User.Id, Context.Guild.Id);
+            }
+        }
     }
 }
