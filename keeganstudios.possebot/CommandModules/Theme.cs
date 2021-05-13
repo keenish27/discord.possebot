@@ -216,7 +216,7 @@ namespace keeganstudios.possebot.CommandModules
             }
             catch(Exception ex)
             {
-                await ReplyAsync($"Hey { Context.User.Mention}, I ran into a problem and couldn't get your theme info 😢.");
+                await ReplyAsync($"Hey {Context.User.Mention}, I ran into a problem and couldn't get your theme info 😢.");
                 _logger.LogError(ex, "Unable to get theme info for user: {userId} in guild: {guildId}", Context.User.Id, Context.Guild.Id);
             }
         }
