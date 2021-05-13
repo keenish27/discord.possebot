@@ -35,7 +35,7 @@ namespace keeganstudios.possebot.CommandModules
         }               
 
         [Command("announce-me", RunMode = RunMode.Async)]
-        [Alias("am")]
+        [Alias("announce me", "am")]
         [Summary("Announces the user in their current voice channel using their enabled theme.")]
         public async Task ThemeAnnounceAsync()
         {
@@ -70,13 +70,13 @@ namespace keeganstudios.possebot.CommandModules
             }
             catch(Exception ex)
             {
-                await ReplyAsync($"Hey { Context.User.Mention}, I ran into a problem and couldn't announce you 😢.");
+                await ReplyAsync($"Hey {Context.User.Mention}, I ran into a problem and couldn't announce you 😢.");
                 _logger.LogError(ex, "Unable to announce theme for user: userId} in guild: guildId}", Context.User.Id, Context.Guild.Id);
             }
         }
 
         [Command("theme-enable", RunMode = RunMode.Async)]
-        [Alias("te")]
+        [Alias("theme enable", "te")]
         [Summary("Enables or Disables your theme.")]
         public async Task ThemeEnableAsync([Summary("true or false")] bool enabled)
         {
@@ -105,7 +105,7 @@ namespace keeganstudios.possebot.CommandModules
         }
 
         [Command("theme-attach", RunMode=RunMode.Async)]
-        [Alias("ta")]
+        [Alias("theme attach", "ta")]
         [Summary("Updates a user theme with the audio file attached to the message")]
         public async Task ThemeAttachAsync([Summary("Position to start in seconds")]int start, [Summary("Length of time to play in seconds")]int duration)
         {
@@ -115,6 +115,7 @@ namespace keeganstudios.possebot.CommandModules
                 if(attachment == null)
                 {
                     await ReplyAsync($"Hey {Context.User.Mention}, you didn't attach a file.");
+                    _logger.LogInformation("User: (Name: {userName} Id: {userId}) didn't attach a file.", Context.User.Username, Context.User.Id);
                     return;
                 }
 
@@ -122,6 +123,7 @@ namespace keeganstudios.possebot.CommandModules
                 if (!_acceptedAudioFileExtensions.Any(x => x == fileExtension))
                 {
                     await ReplyAsync($"Hey {Context.User.Mention}, \"{fileExtension}\" is not an accepted file type. I can accept {string.Join(", " ,_acceptedAudioFileExtensions)} files.");
+                    _logger.LogInformation("User: (Name: {userName} Id: {userId}) tried to attach file type [{fileExtension}] isn't isn't supported.", Context.User.Username, Context.User.Id, fileExtension);
                     return;
                 }
 
@@ -131,7 +133,7 @@ namespace keeganstudios.possebot.CommandModules
                 var theme = _optionsService.CreateTheme(Context.User.Id, Context.Guild.Id, filePath, start, duration, true);                
 
                 await _optionsService.WriteThemeAsync(theme);
-                await ReplyAsync($"Hey {Context.User.Mention}, you're theme has been updated!");
+                await ReplyAsync($"Hey {Context.User.Mention}, you're theme has been updated!");                
 
             }
             catch(Exception ex)
@@ -142,7 +144,7 @@ namespace keeganstudios.possebot.CommandModules
         }
 
         [Command("theme-grab", RunMode = RunMode.Async)]
-        [Alias("tg")]
+        [Alias("theme grab", "tg")]
         [Summary("Updates a user theme with audio from youtube url")]
         public async Task ThemeGrabAsync([Summary("Youtube Url")] string url, [Summary("Position to start in seconds")] int start, [Summary("Length of time to play in seconds")] int duration)
         {
@@ -157,6 +159,7 @@ namespace keeganstudios.possebot.CommandModules
                 if (resourceToSave == null)
                 {
                     await ReplyAsync($"Hey {Context.User.Mention}, I didn't find any usable audio streams for {result.Title}. Please try a different url.");
+                    _logger.LogInformation("Unable to find any usable audio streams for [{title}] at url: {url}", result.Title, url);
                     return;
                 }
 
@@ -181,7 +184,7 @@ namespace keeganstudios.possebot.CommandModules
         }
 
         [Command("theme-info",RunMode = RunMode.Async)]
-        [Alias("ti")]
+        [Alias("theme info", "ti")]
         [Summary("Provides the user with the current information for their theme.")]
         public async Task ThemeInformationAsync()
         {
@@ -264,12 +267,12 @@ namespace keeganstudios.possebot.CommandModules
             catch (Exception ex)
             {
                 await ReplyAsync($"Hey { Context.User.Mention}, I ran into a problem and couldn't announce {userName} 😢.");
-                _logger.LogError(ex, "Unable to announce theme for user: userName} in guild: guildId}", userName, Context.Guild.Id);
+                _logger.LogError(ex, "Unable to announce theme for user: {userName} in guild: {guildId}", userName, Context.Guild.Id);
             }
         }
 
         [Command("theme-grab-user", RunMode = RunMode.Async)]
-        [Alias("tgu")]
+        [Alias("theme grab user", "tgu")]
         [Summary("Sets a theme for the given user")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task ThemeGrabForUserAsync([Summary("Username")] string userName, [Summary("Youtube Url")] string url, [Summary("Position to start in seconds")] int start, [Summary("Length of time to play in seconds")] int duration)
@@ -280,6 +283,7 @@ namespace keeganstudios.possebot.CommandModules
                 if(user == null)
                 {
                     await ReplyAsync($"Hey, {Context.User.Mention}, I can't find user {userName} so I am unable to set that user's theme.");
+                    _logger.LogInformation("Unable to find user {userName} to update their theme", userName);
                     return;
                 }
 
@@ -292,6 +296,7 @@ namespace keeganstudios.possebot.CommandModules
                 if (resourceToSave == null)
                 {
                     await ReplyAsync($"Hey {Context.User.Mention}, I didn't find any usable audio streams for {result.Title}. Please try a different url.");
+                    _logger.LogInformation("Unable to find any usable audio streams for [{title}] at url: {url}", result.Title, url);
                     return;
                 }
 

@@ -1,4 +1,5 @@
-﻿using Discord.Commands;
+﻿using Discord;
+using Discord.Commands;
 using Discord.WebSocket;
 using keeganstudios.possebot.Services;
 using Microsoft.Extensions.Logging;
@@ -23,6 +24,8 @@ namespace keeganstudios.possebot
             _client = client;
             _services = services;
             _optionsService = options;
+
+            _commands.CommandExecuted += CommandExecutedAsync;
         }
 
         public async Task InstallCommandsAsync()
@@ -68,6 +71,31 @@ namespace keeganstudios.possebot
             catch(Exception ex)
             {
                 _logger.LogError(ex, "Unable to handle command");
+            }
+        }
+
+        public async Task CommandExecutedAsync(Optional<CommandInfo> command, ICommandContext context, IResult result)
+        {
+            try
+            {
+                if (!command.IsSpecified)
+                {
+                    _logger.LogInformation("Command failed to execute for User: (Name: {userName} Id: {userId}). Reason: {errorReason}", context.User.Username, context.User.Id, result.ErrorReason);
+                    return;
+                }
+
+                if (result.IsSuccess)
+                {
+                    _logger.LogInformation("Command [{commandName}] was executed by User: (Name: {userName} Id: {userId})", command.Value.Name, context.User.Username, context.User.Id);
+                    return;
+                }
+
+                await context.Channel.SendMessageAsync($"Hey {context.User.Username}, something went wrong -> [{result}]!");
+                _logger.LogError("Unable to process Command [{commandName}] by User: (Name: {userName} Id: {userId}). Result: {result}", command.Value.Name, context.User.Username, context.User.Id, result);
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Unable to execute command");
             }
         }
     }
