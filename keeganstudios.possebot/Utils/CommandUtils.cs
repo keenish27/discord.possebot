@@ -34,9 +34,9 @@ namespace keeganstudios.possebot.Utils
                 command = $"[{configurationOptions.BotPrefix}";
                 if (isHelpCommand)
                 {
-                    command += "help";
+                    command += "help ";
                 }
-                command += $" {commandName}]";
+                command += $"{commandName}]";
             }
             catch(Exception ex)
             {
