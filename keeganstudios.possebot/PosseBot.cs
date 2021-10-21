@@ -1,12 +1,17 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using DotNetTools.SharpGrabber.Internal.Grabbers;
+using DotNetTools.SharpGrabber;
+using DotNetTools.SharpGrabber.YouTube;
+using keeganstudios.possebot.DataAccessLayer;
+using keeganstudios.possebot.Entities;
 using keeganstudios.possebot.Services;
 using keeganstudios.possebot.Utils;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using System;
+using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -20,7 +25,8 @@ namespace keeganstudios.possebot
         private LoggingService _loggingService;
         private EventHandlerService _eventHandlerService;
         private IAudioService _audioService;
-        private IOptionsService _optionsService;     
+        private IOptionsService _optionsService;
+        private IDbUtils _dbUtils;
 
         public async Task Run()
         {            
@@ -31,8 +37,12 @@ namespace keeganstudios.possebot
             _optionsService = _services.GetRequiredService<IOptionsService>();
             _loggingService = _services.GetRequiredService<LoggingService>();
             _eventHandlerService = _services.GetRequiredService<EventHandlerService>();
+            _dbUtils = _services.GetRequiredService<IDbUtils>();
 
             var configOptions = await _optionsService.ReadConfigurationOptionsAsync();
+
+            await _dbUtils.EnsureDatabaseCreated();
+            await _dbUtils.MigrateData();
 
             await _client.LoginAsync(TokenType.Bot, configOptions.Token);
             await _client.StartAsync();
@@ -53,12 +63,37 @@ namespace keeganstudios.possebot
             services.AddSingleton<IOptionsService, OptionsService>();
             services.AddSingleton<IAudioService, AudioService>();
             services.AddSingleton<ICommandUtils, CommandUtils>();
+            services.AddSingleton<IDbUtils, DbUtils>();
             services.AddSingleton<IFileUtils, FileUtils>();
             services.AddSingleton<IEmbedBuilderUtils, EmbedBuilderUtils>();
-            services.AddSingleton<YouTubeGrabber>();
-            services.AddLogging(logging => logging.AddSerilog());
+            services.AddSingleton<GrabberBuilder>();
+            services.AddSingleton<IThemeDal, ThemeDal>();
+            services.AddLogging(logging => logging.AddSerilog());            
+
+            var dbPath = BuildDbPath();
+
+            services.AddDbContext<SqliteContext>(options =>
+                options.UseSqlite($"Data Source={dbPath}"));
 
             return services.BuildServiceProvider();
+        }
+
+        private string BuildDbPath()
+        {
+            var pbFolder = "possebot";
+#if DEBUG
+            pbFolder = "possebot_debug";
+#endif
+            var folder = Environment.SpecialFolder.LocalApplicationData;
+            var path = Path.Combine(Environment.GetFolderPath(folder), pbFolder);
+            var dbPath = $"{path}{System.IO.Path.DirectorySeparatorChar}possebot.db";
+
+            if(!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
+
+            return dbPath;
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Discord.WebSocket;
+using keeganstudios.possebot.DataAccessLayer;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -12,13 +13,13 @@ namespace keeganstudios.possebot.Services
         private readonly ILogger<EventHandlerService> _logger;
         private readonly DiscordSocketClient _client;
         private readonly IAudioService _audioService;
-        private readonly IOptionsService _optionsService;
-        public EventHandlerService(ILogger<EventHandlerService> logger, DiscordSocketClient client, IAudioService audioService, IOptionsService optionsService)
+        private readonly IThemeDal _themeDal;
+        public EventHandlerService(ILogger<EventHandlerService> logger, DiscordSocketClient client, IAudioService audioService, IThemeDal themeDal)
         {
             _logger = logger;
             _client = client;
             _audioService = audioService;
-            _optionsService = optionsService;
+            _themeDal = themeDal;
 
             _client.UserVoiceStateUpdated += OnVoiceStateUpdated;
         }
@@ -33,7 +34,7 @@ namespace keeganstudios.possebot.Services
             {
                 _logger.LogInformation("User (Name: {username} ID: {userId}) joined to a VoiceChannel (Name: {voiceChannelName} Id: {voiceChannelId}) Guild Id: {guildId}", user.Username, user.Id, state2.VoiceChannel.Name, state2.VoiceChannel.Id, state2.VoiceChannel.Guild);
 
-                var theme = await _optionsService.ReadUserThemeDetailsAsync(state2.VoiceChannel.Guild.Id, user.Id);
+                var theme = await _themeDal.GetThemeAsync(user.Id, state2.VoiceChannel.Guild.Id);
 
                 if (theme != null && theme.Enabled)
                 {

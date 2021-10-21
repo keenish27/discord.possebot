@@ -1,9 +1,8 @@
 ﻿using DotNetTools.SharpGrabber;
-using DotNetTools.SharpGrabber.Media;
+using DotNetTools.SharpGrabber.Grabbed;
 using keeganstudios.possebot.Services;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -46,8 +45,9 @@ namespace keeganstudios.possebot.Utils
             return command;
         }
 
-        public GrabbedMedia GetGrabbedMediaToSave(IList<IGrabbed> resources)
+        public GrabbedMedia GetGrabbedMediaToSave(GrabResult result)
         {
+            var resources = result.Resources<GrabbedMedia>().Where(m => m.Channels == MediaChannels.Audio).ToList();
             GrabbedMedia resourceToSave = null;
             try
             {
