@@ -59,24 +59,6 @@ namespace keeganstudios.possebot.Services
             return _themeOptions;
         }
 
-        public async Task<ThemeDetails> ReadUserThemeDetailsAsync(ulong guildId, ulong userId)
-        {
-            ThemeDetails theme = null;
-            try
-            {
-                _logger.LogInformation("Reading theme details for Guild Id: {guildId} User Id: {userId}", guildId, userId);
-
-                var themeOptions = await ReadThemeOptionsAsync();                
-                theme = themeOptions.Themes.Where(x => x.GuildId == guildId && x.UserId == userId).FirstOrDefault();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unable to read ThemDetails for User Id: {userId} Guild Id {guildId}", userId, guildId);                
-            }
-
-            return theme;
-        }
-
         public async Task ReloadThemesAsync()
         {
             try

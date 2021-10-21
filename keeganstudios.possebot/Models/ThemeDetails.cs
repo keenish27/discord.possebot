@@ -1,7 +1,10 @@
-﻿namespace keeganstudios.possebot.Models
+﻿using System;
+
+namespace keeganstudios.possebot.Models
 {
     public class ThemeDetails
     {
+        public int Id { get; set; }
         public string AudioPath { get; set; }
         public ulong UserId { get; set; }
         public ulong GuildId { get; set; }
