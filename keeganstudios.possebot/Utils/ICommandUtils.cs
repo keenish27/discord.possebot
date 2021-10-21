@@ -1,6 +1,5 @@
 ﻿using DotNetTools.SharpGrabber;
-using DotNetTools.SharpGrabber.Media;
-using System.Collections.Generic;
+using DotNetTools.SharpGrabber.Grabbed;
 using System.Threading.Tasks;
 
 namespace keeganstudios.possebot.Utils
@@ -9,6 +8,6 @@ namespace keeganstudios.possebot.Utils
     {
         Task<string> BuildCommandAsyc(string commandName);
         Task<string> BuildCommandAsync(string commandName, bool isHelpCommand);
-        public GrabbedMedia GetGrabbedMediaToSave(IList<IGrabbed> resources);
+        public GrabbedMedia GetGrabbedMediaToSave(GrabResult resources);
     }
 }

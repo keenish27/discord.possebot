@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
-using DotNetTools.SharpGrabber.Internal.Grabbers;
+using DotNetTools.SharpGrabber;
+using keeganstudios.possebot.DataAccessLayer;
 using keeganstudios.possebot.Services;
 using keeganstudios.possebot.Utils;
 using Microsoft.Extensions.Logging;
@@ -19,11 +20,12 @@ namespace keeganstudios.possebot.CommandModules
         private readonly ICommandUtils _commandUtils;
         private readonly IFileUtils _fileUtils;
         private readonly IEmbedBuilderUtils _embedBuilderUtils;
-        private readonly YouTubeGrabber _grabber;
+        private readonly IGrabber _grabber;
+        private readonly IThemeDal _themeDal;
 
         private string[] _acceptedAudioFileExtensions = { ".mp3", ".m4a" };
 
-        public Theme(ILogger<Theme> logger, IAudioService audioService, IOptionsService optionsService, ICommandUtils commandUtils, IFileUtils fileUtils,IEmbedBuilderUtils embedBuilderUtils,  YouTubeGrabber grabber)
+        public Theme(ILogger<Theme> logger, IAudioService audioService, IOptionsService optionsService, ICommandUtils commandUtils, IFileUtils fileUtils, IEmbedBuilderUtils embedBuilderUtils, IThemeDal themeDal)
         {
             _logger = logger;
             _audioService = audioService;
@@ -31,7 +33,8 @@ namespace keeganstudios.possebot.CommandModules
             _commandUtils = commandUtils;
             _fileUtils = fileUtils;
             _embedBuilderUtils = embedBuilderUtils;
-            _grabber = grabber;
+            _grabber = GrabberBuilder.New().UseDefaultServices().AddYouTube().Build();
+            _themeDal = themeDal;
         }               
 
         [Command("announce-me", RunMode = RunMode.Async)]
@@ -49,7 +52,8 @@ namespace keeganstudios.possebot.CommandModules
                     await ReplyAsync($"Hey {Context.User.Mention}, you must be in a voice channel!");
                     return;
                 }
-                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.Guild.Id, Context.User.Id);
+
+                var theme = await _themeDal.GetThemeAsync(Context.User.Id, Context.Guild.Id);
 
                 if(theme == null)
                 {
@@ -82,7 +86,7 @@ namespace keeganstudios.possebot.CommandModules
         {
             try
             {
-                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.Guild.Id, Context.User.Id);
+                var theme = await _themeDal.GetThemeAsync(Context.User.Id, Context.Guild.Id);
 
                 if (theme == null)
                 {
@@ -92,7 +96,7 @@ namespace keeganstudios.possebot.CommandModules
 
                 theme.Enabled = enabled;
 
-                await _optionsService.WriteThemeAsync(theme);
+                await _themeDal.WriteThemeAsync(theme);
                 
                 var emoji = new Emoji("👍");
                 await Context.Message.AddReactionAsync(emoji);
@@ -130,9 +134,9 @@ namespace keeganstudios.possebot.CommandModules
                 var filePath = Path.Combine(_fileUtils.BuildAudioFilePath(Context.Guild.Id) , attachment.Filename);
                 await _fileUtils.SaveAudioFile(filePath, attachment.Url);
 
-                var theme = _optionsService.CreateTheme(Context.User.Id, Context.Guild.Id, filePath, start, duration, true);                
+                var theme = _optionsService.CreateTheme(Context.User.Id, Context.Guild.Id, filePath, start, duration, true);
 
-                await _optionsService.WriteThemeAsync(theme);
+                await _themeDal.WriteThemeAsync(theme);
                 await ReplyAsync($"Hey {Context.User.Mention}, you're theme has been updated!");                
 
             }
@@ -154,7 +158,7 @@ namespace keeganstudios.possebot.CommandModules
 
                 await ReplyAsync($"Hey {Context.User.Mention}, I'm going to grab {result.Title} and set that as your theme. This can take a few minutes so hang tight. I'll let you know when I'm done.");
 
-                var resourceToSave = _commandUtils.GetGrabbedMediaToSave(result.Resources);
+                var resourceToSave = _commandUtils.GetGrabbedMediaToSave(result);
                
                 if (resourceToSave == null)
                 {
@@ -173,7 +177,7 @@ namespace keeganstudios.possebot.CommandModules
 
                 var theme = _optionsService.CreateTheme(Context.User.Id, Context.Guild.Id, filePath, start, duration, true);
 
-                await _optionsService.WriteThemeAsync(theme);
+                await _themeDal.WriteThemeAsync(theme);
                 await ReplyAsync($"Hey {Context.User.Mention}, you're theme has been updated to {result.Title}! Use the {await _commandUtils.BuildCommandAsyc("announce-me")} to hear it.");
             }
             catch (Exception ex)
@@ -190,9 +194,9 @@ namespace keeganstudios.possebot.CommandModules
         {
             try
             {                
-                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.Guild.Id, Context.User.Id);
-                
-                if(theme == null)
+                var theme = await _themeDal.GetThemeAsync(Context.User.Id, Context.Guild.Id);
+
+                if (theme == null)
                 {
                     await ReplyAsync($"Hey {Context.User.Mention}, you don't have a theme set. Please use {await _commandUtils.BuildCommandAsync("theme-attach", true)} to learn how to set you're own theme.");
                     return;
@@ -245,7 +249,7 @@ namespace keeganstudios.possebot.CommandModules
                     return;
                 }
 
-                var theme = await _optionsService.ReadUserThemeDetailsAsync(Context.Guild.Id, user.Id);
+                var theme = await _themeDal.GetThemeAsync(Context.User.Id, Context.Guild.Id);
 
                 if (theme == null)
                 {
@@ -291,7 +295,7 @@ namespace keeganstudios.possebot.CommandModules
 
                 await ReplyAsync($"Hey {Context.User.Mention}, I'm going to grab {result.Title} and set that as {user.Username}'s theme. This can take a few minutes so hang tight. I'll let you know when I'm done.");
 
-                var resourceToSave = _commandUtils.GetGrabbedMediaToSave(result.Resources);
+                var resourceToSave = _commandUtils.GetGrabbedMediaToSave(result);
 
                 if (resourceToSave == null)
                 {
@@ -310,7 +314,7 @@ namespace keeganstudios.possebot.CommandModules
 
                 var theme = _optionsService.CreateTheme(user.Id, Context.Guild.Id, filePath, start, duration, true);
 
-                await _optionsService.WriteThemeAsync(theme);
+                await _themeDal.WriteThemeAsync(theme);
                 await ReplyAsync($"Hey {Context.User.Mention}, you're theme has been updated to {result.Title}! Use the {await _commandUtils.BuildCommandAsyc("announce-me")} to hear it.");
             }
             catch(Exception ex)
