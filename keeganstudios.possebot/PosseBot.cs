@@ -66,7 +66,8 @@ namespace keeganstudios.possebot
             services.AddSingleton<IDbUtils, DbUtils>();
             services.AddSingleton<IFileUtils, FileUtils>();
             services.AddSingleton<IEmbedBuilderUtils, EmbedBuilderUtils>();
-            services.AddSingleton<GrabberBuilder>();
+            services.AddSingleton<IGrabberServices, GrabberServices>();
+            services.AddSingleton<IGrabber, YouTubeGrabber>();
             services.AddSingleton<IThemeDal, ThemeDal>();
             services.AddLogging(logging => logging.AddSerilog());            
 
