@@ -25,7 +25,7 @@ namespace keeganstudios.possebot.CommandModules
 
         private string[] _acceptedAudioFileExtensions = { ".mp3", ".m4a" };
 
-        public Theme(ILogger<Theme> logger, IAudioService audioService, IOptionsService optionsService, ICommandUtils commandUtils, IFileUtils fileUtils, IEmbedBuilderUtils embedBuilderUtils, IThemeDal themeDal)
+        public Theme(ILogger<Theme> logger, IAudioService audioService, IOptionsService optionsService, ICommandUtils commandUtils, IFileUtils fileUtils, IEmbedBuilderUtils embedBuilderUtils, IGrabber grabber, IThemeDal themeDal)
         {
             _logger = logger;
             _audioService = audioService;
@@ -33,7 +33,7 @@ namespace keeganstudios.possebot.CommandModules
             _commandUtils = commandUtils;
             _fileUtils = fileUtils;
             _embedBuilderUtils = embedBuilderUtils;
-            _grabber = GrabberBuilder.New().UseDefaultServices().AddYouTube().Build();
+            _grabber = grabber;
             _themeDal = themeDal;
         }               
 
