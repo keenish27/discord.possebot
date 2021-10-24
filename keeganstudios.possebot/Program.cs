@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Configuration;
 using Serilog;
+using System.IO;
 
 namespace keeganstudios.possebot
 {
@@ -11,7 +13,12 @@ namespace keeganstudios.possebot
                 .WriteTo.Console()
                 .CreateLogger();
 
-            var bot = new PosseBot();
+            IConfigurationRoot configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("settings.json")
+                .Build();
+
+            var bot = new PosseBot(configuration);
             bot.Run().ConfigureAwait(false).GetAwaiter().GetResult();            
         }        
     }

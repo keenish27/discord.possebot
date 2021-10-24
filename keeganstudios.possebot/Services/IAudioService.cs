@@ -11,11 +11,11 @@ namespace keeganstudios.possebot.Services
 {
     public interface IAudioService
     {
-        Task ConnectToVoiceAndPlayTheme(IVoiceChannel voiceChannel, ThemeDetails theme);
-        ProcessStartInfo CreatePsi(ThemeDetails theme);
-        Task PlayAudioFile(IAudioClient audioClient, ThemeDetails theme);
+        Task ConnectToVoiceAndPlayTheme(IVoiceChannel voiceChannel, ThemeDetail theme);
+        ProcessStartInfo CreatePsi(ThemeDetail theme);
+        Task PlayAudioFile(IAudioClient audioClient, ThemeDetail theme);
         string BuildFfmpegArguments(string path, int start, int duration);
-        Task SendAudioAsync(IAudioClient client, ThemeDetails theme);
+        Task SendAudioAsync(IAudioClient client, ThemeDetail theme);
         Task DisconnectFromVoice(IVoiceChannel voiceChannel);
     }
 }

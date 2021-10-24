@@ -8,6 +8,5 @@ namespace keeganstudios.possebot.Utils
     public interface IDbUtils
     {
         Task EnsureDatabaseCreated();
-        Task MigrateData();
     }
 }

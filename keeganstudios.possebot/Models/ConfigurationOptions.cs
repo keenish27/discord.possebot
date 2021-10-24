@@ -4,5 +4,6 @@
     {
         public string Token { get; set; }
         public char BotPrefix { get; set; }
+        public string DbFolder { get; set; }
     }
 }

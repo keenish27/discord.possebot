@@ -8,8 +8,8 @@ namespace keeganstudios.possebot.DataAccessLayer
 {
     public interface IThemeDal
     {
-        Task<ThemeDetails> GetThemeAsync(int themeId);
-        Task<ThemeDetails> GetThemeAsync(ulong userId, ulong guildId);
-        Task WriteThemeAsync(ThemeDetails themeDetail);
+        Task<ThemeDetail> GetThemeAsync(int themeId);
+        Task<ThemeDetail> GetThemeAsync(ulong userId, ulong guildId);
+        Task WriteThemeAsync(ThemeDetail themeDetail);
     }
 }

@@ -20,9 +20,9 @@ namespace keeganstudios.possebot.DataAccessLayer
             _sqliteContext = sqliteContext;
         }
 
-        public async Task<ThemeDetails> GetThemeAsync(int themeId)
+        public async Task<ThemeDetail> GetThemeAsync(int themeId)
         {
-            var themeDetail = new ThemeDetails();
+            var themeDetail = new ThemeDetail();
             try
             {
                 var theme = await _sqliteContext.Themes.AsQueryable().Where(x => x.Id == themeId).FirstOrDefaultAsync();
@@ -41,9 +41,9 @@ namespace keeganstudios.possebot.DataAccessLayer
             return themeDetail;
         }
 
-        public async Task<ThemeDetails> GetThemeAsync(ulong userId, ulong guildId)
+        public async Task<ThemeDetail> GetThemeAsync(ulong userId, ulong guildId)
         {
-            var themeDetail = new ThemeDetails();
+            var themeDetail = new ThemeDetail();
             try
             {
                 var theme = await _sqliteContext.Themes.AsQueryable().Where(x => x.UserId == userId && x.GuildId == guildId).FirstOrDefaultAsync();
@@ -62,7 +62,7 @@ namespace keeganstudios.possebot.DataAccessLayer
             return themeDetail;
         }
 
-        public async Task WriteThemeAsync(ThemeDetails themeDetail)
+        public async Task WriteThemeAsync(ThemeDetail themeDetail)
         {
             try
             {
