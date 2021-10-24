@@ -5,9 +5,9 @@ namespace keeganstudios.possebot.Extensions
 {
     public static class EntityExtensions
     {
-        public static ThemeDetails ToModel(this Theme themeEntity)
+        public static ThemeDetail ToModel(this Theme themeEntity)
         {
-            var themeDetails = new ThemeDetails();
+            var themeDetails = new ThemeDetail();
 
             themeDetails.Id = themeEntity.Id;
             themeDetails.AudioPath = themeEntity.AudioPath;
@@ -20,7 +20,7 @@ namespace keeganstudios.possebot.Extensions
             return themeDetails;
         }
 
-        public static void UpdateEntity(this Theme themeEntity, ThemeDetails themeModel)
+        public static void UpdateEntity(this Theme themeEntity, ThemeDetail themeModel)
         {
             themeEntity.AudioPath = themeModel.AudioPath;
             themeEntity.UserId = themeModel.UserId;

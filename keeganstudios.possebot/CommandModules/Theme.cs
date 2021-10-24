@@ -16,7 +16,8 @@ namespace keeganstudios.possebot.CommandModules
     {
         private readonly ILogger<Theme> _logger;
         private readonly IAudioService _audioService;
-        private readonly IOptionsService _optionsService;        
+        private readonly IOptionsService _optionsService;
+        private readonly IModelService _modelService;
         private readonly ICommandUtils _commandUtils;
         private readonly IFileUtils _fileUtils;
         private readonly IEmbedBuilderUtils _embedBuilderUtils;
@@ -25,11 +26,12 @@ namespace keeganstudios.possebot.CommandModules
 
         private string[] _acceptedAudioFileExtensions = { ".mp3", ".m4a" };
 
-        public Theme(ILogger<Theme> logger, IAudioService audioService, IOptionsService optionsService, ICommandUtils commandUtils, IFileUtils fileUtils, IEmbedBuilderUtils embedBuilderUtils, IGrabber grabber, IThemeDal themeDal)
+        public Theme(ILogger<Theme> logger, IAudioService audioService, IOptionsService optionsService, IModelService modelService, ICommandUtils commandUtils, IFileUtils fileUtils, IEmbedBuilderUtils embedBuilderUtils, IGrabber grabber, IThemeDal themeDal)
         {
             _logger = logger;
             _audioService = audioService;
-            _optionsService = optionsService;            
+            _optionsService = optionsService;
+            _modelService = modelService;
             _commandUtils = commandUtils;
             _fileUtils = fileUtils;
             _embedBuilderUtils = embedBuilderUtils;
@@ -134,7 +136,7 @@ namespace keeganstudios.possebot.CommandModules
                 var filePath = Path.Combine(_fileUtils.BuildAudioFilePath(Context.Guild.Id) , attachment.Filename);
                 await _fileUtils.SaveAudioFile(filePath, attachment.Url);
 
-                var theme = _optionsService.CreateTheme(Context.User.Id, Context.Guild.Id, filePath, start, duration, true);
+                var theme = _modelService.CreateThemeDetail(Context.User.Id, Context.Guild.Id, filePath, start, duration, true);
 
                 await _themeDal.WriteThemeAsync(theme);
                 await ReplyAsync($"Hey {Context.User.Mention}, you're theme has been updated!");                
@@ -175,7 +177,7 @@ namespace keeganstudios.possebot.CommandModules
                     await _fileUtils.SaveAudioFile(filePath, resourceToSave.ResourceUri.ToString());                    
                 }
 
-                var theme = _optionsService.CreateTheme(Context.User.Id, Context.Guild.Id, filePath, start, duration, true);
+                var theme = _modelService.CreateThemeDetail(Context.User.Id, Context.Guild.Id, filePath, start, duration, true);
 
                 await _themeDal.WriteThemeAsync(theme);
                 await ReplyAsync($"Hey {Context.User.Mention}, you're theme has been updated to {result.Title}! Use the {await _commandUtils.BuildCommandAsyc("announce-me")} to hear it.");
@@ -312,7 +314,7 @@ namespace keeganstudios.possebot.CommandModules
                     await _fileUtils.SaveAudioFile(filePath, resourceToSave.ResourceUri.ToString());
                 }
 
-                var theme = _optionsService.CreateTheme(user.Id, Context.Guild.Id, filePath, start, duration, true);
+                var theme = _modelService.CreateThemeDetail(user.Id, Context.Guild.Id, filePath, start, duration, true);
 
                 await _themeDal.WriteThemeAsync(theme);
                 await ReplyAsync($"Hey {Context.User.Mention}, you're theme has been updated to {result.Title}! Use the {await _commandUtils.BuildCommandAsyc("announce-me")} to hear it.");

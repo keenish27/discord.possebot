@@ -21,7 +21,7 @@ namespace keeganstudios.possebot.Services
             _logger = logger;
         }
 
-        public Task ConnectToVoiceAndPlayTheme(IVoiceChannel voiceChannel, ThemeDetails theme)
+        public Task ConnectToVoiceAndPlayTheme(IVoiceChannel voiceChannel, ThemeDetail theme)
         {
             _ = Task.Run(async () =>
             {
@@ -77,7 +77,7 @@ namespace keeganstudios.possebot.Services
             return Task.CompletedTask;
         }
 
-        public ProcessStartInfo CreatePsi(ThemeDetails theme)
+        public ProcessStartInfo CreatePsi(ThemeDetail theme)
         {
             _logger.LogInformation("Building process start info for theme: {@theme}", theme);
             var args = BuildFfmpegArguments(theme.AudioPath, theme.Start, theme.Duration);            
@@ -90,7 +90,7 @@ namespace keeganstudios.possebot.Services
             };
         }
 
-        public async Task PlayAudioFile(IAudioClient audioClient, ThemeDetails theme)
+        public async Task PlayAudioFile(IAudioClient audioClient, ThemeDetail theme)
         {
             try
             {
@@ -135,7 +135,7 @@ namespace keeganstudios.possebot.Services
             return args.ToString();
         }
 
-        public async Task SendAudioAsync(IAudioClient client, ThemeDetails theme)
+        public async Task SendAudioAsync(IAudioClient client, ThemeDetail theme)
         {
             try
             {
