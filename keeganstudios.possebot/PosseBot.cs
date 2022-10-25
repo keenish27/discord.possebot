@@ -59,8 +59,10 @@ namespace keeganstudios.possebot
         }
 
         private IServiceProvider ConfigureServices()
-        {            
+        {
+            var discordSocketConfig = BuildDiscordSockectConfig();
             var services = new ServiceCollection();
+            services.AddSingleton(discordSocketConfig);
             services.AddSingleton<DiscordSocketClient>();
             services.AddSingleton<CommandService>();
             services.AddSingleton<CommandHandler>();
@@ -85,6 +87,16 @@ namespace keeganstudios.possebot
                 options.UseSqlite($"Data Source={dbPath}"));
 
             return services.BuildServiceProvider();
+        }
+
+        private DiscordSocketConfig BuildDiscordSockectConfig()
+        {
+            var discordSocketConfig = new DiscordSocketConfig()
+            {
+                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
+            };
+
+            return discordSocketConfig;
         }
 
         private string BuildDbPath()
